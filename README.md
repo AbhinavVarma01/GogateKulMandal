@@ -71,5 +71,3 @@ This repository currently has no license file. If you want to add one, consider 
 
 ## Contact / Author
 Repository owner: AbhinavVarma01
-
-If you'd like help polishing this README with screenshots, badges, or a demo link for the GitHub project page, tell me which screenshots or live URL you want included and I will update the README.
