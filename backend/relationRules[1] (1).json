@@ -1,0 +1,101 @@
+[
+  { "relationEnglish": "Father", "relationMarathi": "वडील", "reverseEnglish": "Son", "reverseMarathi": "मुलगा" },
+  { "relationEnglish": "Father", "relationMarathi": "वडील", "reverseEnglish": "Daughter", "reverseMarathi": "मुलगी" },
+  { "relationEnglish": "Mother", "relationMarathi": "आई", "reverseEnglish": "Son", "reverseMarathi": "मुलगा" },
+  { "relationEnglish": "Mother", "relationMarathi": "आई", "reverseEnglish": "Daughter", "reverseMarathi": "मुलगी" },
+
+  { "relationEnglish": "Son", "relationMarathi": "मुलगा", "reverseEnglish": "Father", "reverseMarathi": "वडील" },
+  { "relationEnglish": "Son", "relationMarathi": "मुलगा", "reverseEnglish": "Mother", "reverseMarathi": "आई" },
+  { "relationEnglish": "Daughter", "relationMarathi": "मुलगी", "reverseEnglish": "Father", "reverseMarathi": "वडील" },
+  { "relationEnglish": "Daughter", "relationMarathi": "मुलगी", "reverseEnglish": "Mother", "reverseMarathi": "आई" },
+
+  { "relationEnglish": "Brother", "relationMarathi": "भाऊ", "reverseEnglish": "Brother", "reverseMarathi": "भाऊ" },
+  { "relationEnglish": "Brother", "relationMarathi": "भाऊ", "reverseEnglish": "Sister", "reverseMarathi": "बहीण" },
+  { "relationEnglish": "Sister", "relationMarathi": "बहीण", "reverseEnglish": "Brother", "reverseMarathi": "भाऊ" },
+  { "relationEnglish": "Sister", "relationMarathi": "बहीण", "reverseEnglish": "Sister", "reverseMarathi": "बहीण" },
+
+  { "relationEnglish": "Husband", "relationMarathi": "नवरा", "reverseEnglish": "Wife", "reverseMarathi": "बायको" },
+  { "relationEnglish": "Wife", "relationMarathi": "बायको", "reverseEnglish": "Husband", "reverseMarathi": "नवरा" },
+
+  { "relationEnglish": "Grandfather (Paternal)", "relationMarathi": "आजोबा", "reverseEnglish": "Grandson", "reverseMarathi": "नातू" },
+  { "relationEnglish": "Grandfather (Paternal)", "relationMarathi": "आजोबा", "reverseEnglish": "Granddaughter", "reverseMarathi": "नात" },
+  { "relationEnglish": "Grandfather (Maternal)", "relationMarathi": "आजोबा", "reverseEnglish": "Grandson", "reverseMarathi": "नातू" },
+  { "relationEnglish": "Grandfather (Maternal)", "relationMarathi": "आजोबा", "reverseEnglish": "Granddaughter", "reverseMarathi": "नात" },
+
+  { "relationEnglish": "Grandmother (Paternal)", "relationMarathi": "आजी", "reverseEnglish": "Grandson", "reverseMarathi": "नातू" },
+  { "relationEnglish": "Grandmother (Paternal)", "relationMarathi": "आजी", "reverseEnglish": "Granddaughter", "reverseMarathi": "नात" },
+  { "relationEnglish": "Grandmother (Maternal)", "relationMarathi": "आजी", "reverseEnglish": "Grandson", "reverseMarathi": "नातू" },
+  { "relationEnglish": "Grandmother (Maternal)", "relationMarathi": "आजी", "reverseEnglish": "Granddaughter", "reverseMarathi": "नात" },
+
+  { "relationEnglish": "Uncle (Father’s brother)", "relationMarathi": "काका", "reverseEnglish": "Nephew (Brother’s son)", "reverseMarathi": "पुतण्या" },
+  { "relationEnglish": "Uncle (Father’s brother)", "relationMarathi": "काका", "reverseEnglish": "Niece (Brother’s daughter)", "reverseMarathi": "पुतणी" },
+  { "relationEnglish": "Aunt (Father’s sister)", "relationMarathi": "आत्या", "reverseEnglish": "Nephew (Brother’s son)", "reverseMarathi": "पुतण्या" },
+  { "relationEnglish": "Aunt (Father’s sister)", "relationMarathi": "आत्या", "reverseEnglish": "Niece (Brother’s daughter)", "reverseMarathi": "पुतणी" },
+
+  { "relationEnglish": "Uncle (Mother’s brother)", "relationMarathi": "मामा", "reverseEnglish": "Nephew (Sister’s son)", "reverseMarathi": "भाचा" },
+  { "relationEnglish": "Uncle (Mother’s brother)", "relationMarathi": "मामा", "reverseEnglish": "Niece (Sister’s daughter)", "reverseMarathi": "भाची" },
+  { "relationEnglish": "Aunt (Mother’s sister)", "relationMarathi": "मावशी", "reverseEnglish": "Nephew (Sister’s son)", "reverseMarathi": "भाचा" },
+  { "relationEnglish": "Aunt (Mother’s sister)", "relationMarathi": "मावशी", "reverseEnglish": "Niece (Sister’s daughter)", "reverseMarathi": "भाची" },
+
+  { "relationEnglish": "Uncle (Father’s sister’s husband)", "relationMarathi": "आतोबा", "reverseEnglish": "Nephew (Brother’s son)", "reverseMarathi": "पुतण्या" },
+  { "relationEnglish": "Uncle (Father’s sister’s husband)", "relationMarathi": "आतोबा", "reverseEnglish": "Niece (Brother’s daughter)", "reverseMarathi": "पुतणी" },
+  { "relationEnglish": "Uncle (Mother’s sister’s husband)", "relationMarathi": "मावसा", "reverseEnglish": "Nephew (Sister’s son)", "reverseMarathi": "भाचा" },
+  { "relationEnglish": "Uncle (Mother’s sister’s husband)", "relationMarathi": "मावसा", "reverseEnglish": "Niece (Sister’s daughter)", "reverseMarathi": "भाची" },
+
+  { "relationEnglish": "Cousin (Paternal, Male)", "relationMarathi": "चुलत भाऊ", "reverseEnglish": "Cousin (Paternal, Male)", "reverseMarathi": "चुलत भाऊ" },
+  { "relationEnglish": "Cousin (Paternal, Female)", "relationMarathi": "चुलत बहीण", "reverseEnglish": "Cousin (Paternal, Female)", "reverseMarathi": "चुलत बहीण" },
+  { "relationEnglish": "Cousin (Maternal, Male)", "relationMarathi": "मावस भाऊ", "reverseEnglish": "Cousin (Maternal, Male)", "reverseMarathi": "मावस भाऊ" },
+  { "relationEnglish": "Cousin (Maternal, Female)", "relationMarathi": "मावस बहीण", "reverseEnglish": "Cousin (Maternal, Female)", "reverseMarathi": "मावस बहीण" },
+
+  { "relationEnglish": "Nephew (Brother’s son)", "relationMarathi": "पुतण्या", "reverseEnglish": "Uncle (Father’s brother)", "reverseMarathi": "काका" },
+  { "relationEnglish": "Niece (Brother’s daughter)", "relationMarathi": "पुतणी", "reverseEnglish": "Uncle (Father’s brother)", "reverseMarathi": "काका" },
+  { "relationEnglish": "Nephew (Sister’s son)", "relationMarathi": "भाचा", "reverseEnglish": "Aunt (Mother’s sister)", "reverseMarathi": "मावशी" },
+  { "relationEnglish": "Niece (Sister’s daughter)", "relationMarathi": "भाची", "reverseEnglish": "Aunt (Mother’s sister)", "reverseMarathi": "मावशी" },
+
+  { "relationEnglish": "Father-in-law", "relationMarathi": "सासरे", "reverseEnglish": "Son-in-law", "reverseMarathi": "जावई" },
+  { "relationEnglish": "Father-in-law", "relationMarathi": "सासरे", "reverseEnglish": "Daughter-in-law", "reverseMarathi": "सून" },
+  { "relationEnglish": "Mother-in-law", "relationMarathi": "सासू", "reverseEnglish": "Son-in-law", "reverseMarathi": "जावई" },
+  { "relationEnglish": "Mother-in-law", "relationMarathi": "सासू", "reverseEnglish": "Daughter-in-law", "reverseMarathi": "सून" },
+
+  { "relationEnglish": "Son-in-law", "relationMarathi": "जावई", "reverseEnglish": "Father-in-law", "reverseMarathi": "सासरे" },
+  { "relationEnglish": "Son-in-law", "relationMarathi": "जावई", "reverseEnglish": "Mother-in-law", "reverseMarathi": "सासू" },
+  { "relationEnglish": "Daughter-in-law", "relationMarathi": "सून", "reverseEnglish": "Father-in-law", "reverseMarathi": "सासरे" },
+  { "relationEnglish": "Daughter-in-law", "relationMarathi": "सून", "reverseEnglish": "Mother-in-law", "reverseMarathi": "सासू" },
+
+  { "relationEnglish": "Brother-in-law (wife’s brother)", "relationMarathi": "मेहुणा", "reverseEnglish": "Sister-in-law (wife’s sister)", "reverseMarathi": "साळी" },
+  { "relationEnglish": "Brother-in-law (husband’s brother)", "relationMarathi": "भाऊजी", "reverseEnglish": "Sister-in-law (husband’s sister)", "reverseMarathi": "नणंद" },
+  { "relationEnglish": "Sister-in-law (husband’s sister)", "relationMarathi": "नणंद", "reverseEnglish": "Brother-in-law (husband’s brother)", "reverseMarathi": "दीर" },
+  { "relationEnglish": "Sister-in-law (wife’s sister)", "relationMarathi": "साळी", "reverseEnglish": "Brother-in-law (wife’s brother)", "reverseMarathi": "मेहुणा" },
+
+  { "relationEnglish": "Co-sister", "relationMarathi": "जाऊ", "reverseEnglish": "Co-sister", "reverseMarathi": "जाऊ" },
+  { "relationEnglish": "Husband of wife’s sister", "relationMarathi": "साडू", "reverseEnglish": "Husband of wife’s sister", "reverseMarathi": "साडू" },
+  { "relationEnglish": "Aunt (Father’s brother’s wife)", "relationMarathi": "काकू", "reverseEnglish": "Uncle (Father’s brother)", "reverseMarathi": "काका" },
+  { "relationEnglish": "Aunt (Mother’s brother’s wife)", "relationMarathi": "मामी", "reverseEnglish": "Uncle (Mother’s brother)", "reverseMarathi": "मामा" },
+
+  { "relationEnglish": "Grandson", "relationMarathi": "नातू", "reverseEnglish": "Grandfather", "reverseMarathi": "आजोबा" },
+  { "relationEnglish": "Grandson", "relationMarathi": "नातू", "reverseEnglish": "Grandmother", "reverseMarathi": "आजी" },
+
+  { "relationEnglish": "Granddaughter", "relationMarathi": "नात", "reverseEnglish": "Grandfather", "reverseMarathi": "आजोबा" },
+  { "relationEnglish": "Granddaughter", "relationMarathi": "नात", "reverseEnglish": "Grandmother", "reverseMarathi": "आजी" },
+
+  { "relationEnglish": "Great grandson", "relationMarathi": "पणतू", "reverseEnglish": "Great grandfather", "reverseMarathi": "पणजोबा" },
+  { "relationEnglish": "Great grandson", "relationMarathi": "पणतू", "reverseEnglish": "Great grandmother", "reverseMarathi": "पणजी" },
+
+  { "relationEnglish": "Great granddaughter", "relationMarathi": "पणतू", "reverseEnglish": "Great grandfather", "reverseMarathi": "पणजोबा" },
+  { "relationEnglish": "Great granddaughter", "relationMarathi": "पणतू", "reverseEnglish": "Great grandmother", "reverseMarathi": "पणजी" },
+
+  { "relationEnglish": "Sister's husband", "relationMarathi": "जावई", "reverseEnglish": "Wife’s brother", "reverseMarathi": "मेव्हणा" },
+  { "relationEnglish": "Sister's husband", "relationMarathi": "जावई", "reverseEnglish": "Wife’s sister", "reverseMarathi": "जाऊ" },
+
+  { "relationEnglish": "Brother's wife", "relationMarathi": "वहिनी", "reverseEnglish": "Husband’s brother", "reverseMarathi": "दिर" },
+  { "relationEnglish": "Brother's wife", "relationMarathi": "वहिनी", "reverseEnglish": "Husband’s sister", "reverseMarathi": "नणंद" },
+
+  { "relationEnglish": "Great grandfather", "relationMarathi": "पणजोबा", "reverseEnglish": "Great grandson", "reverseMarathi": "पणतू" },
+  { "relationEnglish": "Great grandfather", "relationMarathi": "पणजोबा", "reverseEnglish": "Great granddaughter", "reverseMarathi": "पणतू" },
+
+  { "relationEnglish": "Great grandmother", "relationMarathi": "पणजी", "reverseEnglish": "Great grandson", "reverseMarathi": "पणतू" },
+  { "relationEnglish": "Great grandmother", "relationMarathi": "पणजी", "reverseEnglish": "Great granddaughter", "reverseMarathi": "पणतू" }
+
+]
+
+

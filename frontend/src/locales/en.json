@@ -1,0 +1,206 @@
+{
+  "welcome": "Welcome",
+  "about": "About",
+  "kulavruksh": "Kulavruksh",
+  "other": "Other",
+  "loginRegister": "Login / Register",
+  "photoscroller": {
+    "features_description": "Features available in our website",
+    "granth": "Granth",
+    "kulvruttant_samiti": "Kulvruttant Samiti",
+    "gogtenews": "Gogte News",
+    "gogteevents": "Gogte Events",
+    "photogallery": "Photo Gallery",
+    "presidents_thoughts": "President's Thoughts",
+    "remembrance_day": "Remembrance Day",
+    "vaatchaal": "Vaatchaal"
+  },
+  "homepage": {
+    "title": "गोगटे कुलमंडळ",
+    "subtitle": "Discover the rich heritage and spiritual journey of the Gogate Family",
+    "grid": {
+      "vyadeshwar": "Vyadeshwar, Guhagar",
+      "yogeshwari": "Yogeshwari Devi, Ambajogai"
+    },
+    "mission": {
+      "title": "Mission",
+      "subtitle": "Discover the mission and vision of the GogateKulMandal Committee",
+      "description": "Our mission is to preserve and promote our rich cultural heritage, strengthen family bonds, and ensure our traditions are passed down to future generations with pride and reverence.",
+      "button": "Mission"
+    },
+    "familyTree": {
+      "title": "Family Tree",
+      "subtitle": "Our family tree traces back to the original ancestors of the Gogate family, preserving the rich lineage and genealogy that has been passed down through generations.",
+      "branches": {
+        "title": "Family Branches",
+        "description": "Over generations, our family has grown into multiple branches, each contributing to the rich tapestry of our collective heritage and achievements. Every branch represents a unique story of resilience, achievement, and cultural heritage."
+      },
+      "connections": {
+        "title": "Family Connections",
+        "description": "Explore the intricate web of relationships that connect our family members across different generations and locations. These connections strengthen our bonds and preserve our shared identity."
+      }
+    },
+    "newsEvents": {
+      "title": "News & Events",
+      "subtitle": "Our family stays connected through regular updates, celebrations, and shared moments that strengthen our bonds and preserve our traditions.",
+      "celebrations": {
+        "title": "Family Celebrations",
+        "description": "From traditional festivals to modern celebrations, our family gatherings are filled with joy, laughter, and the warmth of shared memories."
+      },
+      "achievements": {
+        "title": "Family Achievements",
+        "description": "Celebrating the accomplishments of our family members in education, career, and community service that make us proud."
+      },
+      "memories": {
+        "title": "Shared Memories",
+        "description": "Photographs and stories that capture the essence of our family life, preserving precious moments for future generations."
+      }
+    }
+  },
+  "yogeshwaridevi": {
+    "title": "Yogeshwari Devi, Ambajogai",
+    "para1": "Yogeshwari Devi, the presiding deity of Ambajogai, Maharashtra, is one of the most revered Shakti goddesses in the region. She is worshipped as the kuldevi (family goddess) by the Gogate family and many others, symbolizing divine strength, wisdom, and compassion.",
+    "para2": "The temple's origins trace back over a millennium, with references in ancient scriptures and folklore. The idol is considered swayambhu (self-manifested) and radiates a powerful spiritual presence. The Yogeshwari Devi Temple is an architectural gem, featuring intricate carvings, grand gateways, and a sanctum that exudes serenity and devotion.",
+    "para3": "Navratri is the most celebrated festival here, marked by vibrant rituals, music, dance, and a surge of devotees seeking the goddess's blessings. The temple is a living testament to the region's cultural and spiritual legacy, serving as a hub for religious gatherings, charity, and education.",
+    "para4": "A visit to Yogeshwari Devi Temple offers not just spiritual fulfillment but also a glimpse into the rich traditions and enduring faith of the community. The goddess's benevolence and the temple's vibrant atmosphere leave a lasting impression on every devotee."
+  },
+  "vyadeshwar": {
+    "title": "Vyadeshwar, Guhagar",
+    "para1": "The Vyadeshwar Temple, nestled in the town of Guhagar, Maharashtra, is a renowned pilgrimage site dedicated to Lord Shiva. This sacred temple is a spiritual anchor for the GogateKul family and countless devotees, drawing visitors from across the region for its tranquil ambiance and deep-rooted traditions.",
+    "para2": "The temple is believed to be centuries old, with legends linking it to the Puranic era. Its ancient Shiva Linga is revered as Swayambhu (self-manifested). Vyadeshwar Temple boasts classic Konkani temple architecture, featuring a spacious sabhamandap, intricately carved pillars, and a peaceful courtyard shaded by old trees.",
+    "para3": "The temple comes alive during Mahashivratri, Shravan, and other auspicious occasions, with elaborate rituals, abhisheks, and cultural programs. It serves as a gathering place for family events, community meetings, and religious discourses, fostering unity and cultural continuity.",
+    "para4": "Visiting Vyadeshwar is not just a religious journey but an experience of serenity, devotion, and connection to one's roots. The temple's pristine surroundings and spiritual aura make it a must-visit for anyone seeking peace and blessings."
+  },
+  "kulvruttantSamiti": "KulvruttantSamiti",
+  "gogteVaatchaal": "Gogate Vaatchaal",
+  "presidentsThoughts": "PresidentsThoughts",
+  "contact": "Contact",
+  "granth2006": "2006 - Granth",
+  "photoGallery": "Photo Gallery",
+  "remembranceDay": "Remembrance Day",
+  "news": "News",
+  "events": "Events",
+  "newsPage": {
+    "title": "GogateKulMandal News",
+    "subtitle": "Latest family updates and celebrations",
+    "backToDashboard": "← Back to Dashboard",
+    "shareFamilyNews": "Share Family News",
+    "searchNews": "Search news...",
+    "allCategories": "All",
+    "categories": {
+      "announcement": "Announcement",
+      "achievement": "Achievement", 
+      "celebration": "Celebration",
+      "tradition": "Tradition",
+      "milestone": "Milestone",
+      "reunion": "Family Reunion",
+      "memory": "Memory",
+      "general": "General"
+    },
+    "stats": {
+      "totalNews": "Total News",
+      "activeAuthors": "Active Authors",
+      "totalLikes": "Total Likes",
+      "categories": "Categories"
+    },
+    "noNewsFound": "No news found",
+    "noNewsDescription": "No news available matching your search criteria.",
+    "addNewsModal": {
+      "title": "Share Family News",
+      "newsTitle": "News Title",
+      "newsTitlePlaceholder": "What's the news about?",
+      "category": "Category",
+      "selectCategory": "Select news category",
+      "content": "News Content",
+      "contentPlaceholder": "Share the details of your family news...",
+      "imageUrl": "Image URL (Optional)",
+      "imageUrlPlaceholder": "https://example.com/image.jpg",
+      "cancel": "Cancel",
+      "shareNews": "Share News"
+    },
+    "sampleNews": {
+      "annualMeeting": {
+        "title": "GogateKulMandal Annual Meeting 2024",
+        "content": "Our kulamandal's annual meeting was successfully concluded. The participation of all family members made this event extremely joyful. Important decisions for the new year were discussed."
+      },
+      "youthAchievement": {
+        "title": "Youth Generation's Academic Success",
+        "content": "Many young men and women from our family have achieved excellent academic performance this year. We are proud of their success in various fields."
+      },
+      "traditionalCelebration": {
+        "title": "Traditional Festival Celebration",
+        "content": "On the occasion of Diwali, all members of our family came together and celebrated the festival in traditional style. We enjoyed worship, aarti and shared meals."
+      }
+    }
+  },
+  "common": {
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "search": "Search",
+    "filter": "Filter",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "submit": "Submit",
+    "reset": "Reset",
+    "view": "View",
+    "share": "Share",
+    "like": "Like",
+    "comment": "Comment",
+    "comments": "Comments",
+    "likes": "Likes",
+    "author": "Author",
+    "date": "Date",
+    "time": "Time",
+    "ago": "ago",
+    "now": "now",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "thisWeek": "This Week",
+    "thisMonth": "This Month",
+    "thisYear": "This Year"
+  },
+  "accessibility": {
+    "toolbar": "Accessibility",
+    "fontSize": "Font Size",
+    "lineSpacing": "Line Spacing",
+    "resetToDefault": "Reset to Default",
+    "skipToContent": "Skip to content",
+    "voiceCommands": "Voice Commands",
+    "voiceCommandsHelp": "Available voice commands",
+    "listening": "listening",
+    "highContrast": "High Contrast"
+  },
+  "familyTreeInstructions": {
+    "title": "Family Tree",
+    "instructions": "Click nodes to highlight connections • Drag to pan"
+  },
+  "contactPage": {
+    "title": "GogateKulMandal Committee",
+    "president": "Narayan Shankar - President",
+    "address": "A-8, Swaroop Society, Near Mhatre Bridge, Gulvani Maharaj Road, Vakilnagar, Erandwane, Pune 411004",
+    "mobile": "Mobile:",
+    "mobileNumber": "80806 01694",
+    "email": "Email:",
+    "emailAddress": "gogtekulam@gmail.com",
+    "viewOnMap": "View on Map",
+    "backToDashboard": "← Back to Dashboard"
+  },
+  "relations": {
+    "father": "Father",
+    "mother": "Mother",
+    "son": "Son",
+    "daughter": "Daughter"
+  }
+}

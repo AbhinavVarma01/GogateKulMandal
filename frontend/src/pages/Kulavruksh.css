@@ -1,0 +1,606 @@
+.kulavruksh-wrapper {
+  min-height: 100vh;
+  padding: 64px 32px 48px;
+  background: #f3f4f6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.kulavruksh-hero {
+  width: 100%;
+  max-width: 1180px;
+  margin-bottom: 32px;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 24px 28px;
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kulavruksh-hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+.kulavruksh-title {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: #111827;
+}
+
+.kulavruksh-title-marathi {
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: #dc2626;
+}
+
+.kulavruksh-title h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0;
+}
+
+.kulavruksh-title p {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f97316;
+}
+
+.kulavruksh-select-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kulavruksh-select-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6b7280;
+}
+
+.kulavruksh-select {
+  min-width: 180px;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #111827;
+  font-size: 0.95rem;
+  font-weight: 600;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kulavruksh-select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  background: #ffffff;
+}
+
+.kulavruksh-toolbar {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.kulavruksh-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 420px;
+  padding: 0 16px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(249, 115, 22, 0.32);
+  box-shadow: inset 0 1px 0 rgba(249, 115, 22, 0.16), 0 18px 38px rgba(15, 23, 42, 0.12);
+}
+
+.kulavruksh-search-icon {
+  color: #fb923c;
+  margin-right: 12px;
+}
+
+.kulavruksh-search-input {
+  flex: 1;
+  height: 46px;
+  border: none;
+  background: transparent;
+  font-size: 0.98rem;
+  color: #1f2937;
+  outline: none;
+}
+
+.kulavruksh-search-input::placeholder {
+  color: #9ca3af;
+}
+
+.kulavruksh-search-clear {
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.kulavruksh-search-clear:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.kulavruksh-summary {
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 16px;
+}
+
+.kulavruksh-stat {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  box-shadow: none;
+  min-width: 160px;
+}
+
+.kulavruksh-stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  color: #ffffff;
+}
+
+.kulavruksh-stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.kulavruksh-stat-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.kulavruksh-tree {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 40px;
+  padding: 0 24px 48px;
+}
+
+.kulavruksh-tree.search-active .tree-node-card {
+  opacity: 0.35;
+}
+
+.kulavruksh-tree.search-active .tree-node-card.highlighted {
+  opacity: 1;
+  border-color: #2563eb;
+  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.18);
+}
+
+.kulavruksh-tree.search-active .tree-node-branch:not(.branch-highlighted) {
+  opacity: 0.35;
+}
+
+.kulavruksh-tree.search-active .tree-node-branch.branch-highlighted {
+  opacity: 1;
+}
+
+.tree-node-branch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  transition: opacity 0.2s ease;
+}
+
+.tree-node-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+}
+
+.tree-node-row.has-children::after {
+  content: '';
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 24px;
+  background: #d1d5db;
+}
+
+.tree-node-spouse-connector {
+  width: 32px;
+  height: 2px;
+  align-self: center;
+  background: #d1d5db;
+}
+
+.tree-children {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 32px;
+  padding-top: 40px;
+  position: relative;
+}
+
+.tree-children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 28px;
+  background: #d1d5db;
+}
+
+.tree-children > .tree-node-branch {
+  position: relative;
+}
+
+.tree-children > .tree-node-branch::before {
+  content: '';
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 28px;
+  background: #d1d5db;
+}
+
+.tree-node-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  padding: 20px;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  min-width: 220px;
+  max-width: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.tree-node-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+}
+
+.tree-node-card.male {
+  border-top: 4px solid #3b82f6;
+}
+
+.tree-node-card.female {
+  border-top: 4px solid #ec4899;
+}
+
+.tree-node-card.unknown {
+  border-top: 4px solid #9ca3af;
+}
+
+.tree-node-card-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+.tree-node-avatar {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #111827;
+  overflow: hidden;
+  border: 4px solid #ffffff;
+  box-shadow: inset 0 0 0 1px #e5e7eb;
+}
+
+.tree-node-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tree-node-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.tree-node-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.tree-node-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.tree-node-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tree-node-tag.gender {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.tree-node-card.female .tree-node-tag.gender {
+  background: #fdf2f8;
+  color: #be185d;
+}
+
+.tree-node-card.unknown .tree-node-tag.gender {
+  background: #f4f4f5;
+  color: #4b5563;
+}
+
+.tree-node-subtext {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.tree-children {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 42px;
+  padding-top: 52px;
+}
+
+.tree-children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 36px;
+  background: linear-gradient(180deg, rgba(249, 115, 22, 0.65) 0%, rgba(249, 115, 22, 0) 100%);
+}
+
+.tree-children > .tree-node-branch {
+  position: relative;
+}
+
+.tree-children > .tree-node-branch::before {
+  content: '';
+  position: absolute;
+  top: -36px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 36px;
+  background: linear-gradient(180deg, rgba(249, 115, 22, 0) 0%, rgba(249, 115, 22, 0.55) 100%);
+}
+
+.kulavruksh-footer {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.kulavruksh-state {
+  width: 100%;
+  min-height: calc(100vh - 160px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px;
+}
+
+.kulavruksh-state-card {
+  max-width: 360px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 26px;
+  padding: 32px;
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  box-shadow: 0 34px 68px rgba(15, 23, 42, 0.18);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  color: #374151;
+  font-weight: 600;
+}
+
+.kulavruksh-state-card.error {
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #b91c1c;
+}
+
+.kulavruksh-state-icon {
+  width: 44px;
+  height: 44px;
+  color: #f97316;
+}
+
+.kulavruksh-loader {
+  width: 46px;
+  height: 46px;
+  color: #f97316;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1024px) {
+  .kulavruksh-wrapper {
+    padding: 60px 20px 40px;
+  }
+
+  .kulavruksh-tree {
+    gap: 44px;
+  }
+
+  .tree-node-card {
+    min-width: 240px;
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .kulavruksh-hero {
+    padding: 28px 26px;
+  }
+
+  .kulavruksh-summary {
+    gap: 14px;
+  }
+
+  .tree-node-row {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .tree-node-row.has-children::after {
+    bottom: -28px;
+  }
+
+  .tree-node-spouse-connector {
+    width: 2px;
+    height: 32px;
+    background: linear-gradient(180deg, rgba(249, 115, 22, 0) 0%, rgba(249, 115, 22, 0.9) 50%, rgba(249, 115, 22, 0) 100%);
+  }
+
+  .tree-node-card {
+    align-items: center;
+    text-align: center;
+  }
+
+  .tree-node-body {
+    align-items: center;
+  }
+
+  .tree-node-details {
+    align-items: center;
+  }
+
+  .tree-node-detail-row {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .tree-node-detail-label {
+    min-width: auto;
+  }
+
+  .tree-node-footer {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 560px) {
+  .kulavruksh-wrapper {
+    padding: 48px 16px 32px;
+  }
+
+  .kulavruksh-hero {
+    padding: 26px 20px;
+    border-radius: 26px;
+  }
+
+  .kulavruksh-title-marathi {
+    font-size: 1.9rem;
+  }
+
+  .kulavruksh-summary {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .kulavruksh-stat {
+    justify-content: center;
+  }
+
+  .tree-node-card {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 18px;
+  }
+
+  .tree-node-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    font-size: 1.05rem;
+  }
+}

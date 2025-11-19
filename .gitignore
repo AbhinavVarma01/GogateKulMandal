@@ -1,0 +1,34 @@
+# macOS system files
+.DS_Store
+
+# Environment & credentials
+.env
+.env.local
+.env.*.local
+backend/service-account.json
+backend/config.json
+
+# Node dependencies
+node_modules/
+
+# Build outputs
+build/
+dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Editor settings
+.vscode/
+.idea/
+
+# OS junk files
+Thumbs.db
+
+# Cache folders
+.cache/
+.next/
