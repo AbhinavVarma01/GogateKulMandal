@@ -20,14 +20,36 @@ const FamilyMemberDetailsPage = ({ descendantsOnly = false }) => {
   const [allMembers, setAllMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [effectiveVansh, setEffectiveVansh] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        // Determine effective vansh (admin/dba/master_admin/users)
+        let vanshParam = '';
+        try {
+          const meResponse = await api.get('/api/auth/me');
+          const role = meResponse.data?.role || 'user';
+          const managedVansh = meResponse.data?.managedVansh;
+          const userVansh = meResponse.data?.VanshNo ?? meResponse.data?.vansh ?? '';
+          const normalizedManaged = managedVansh === undefined || managedVansh === null ? '' : `${managedVansh}`.trim();
+          const normalizedUserVansh = userVansh === undefined || userVansh === null ? '' : `${userVansh}`.trim();
+          const isMasterAdmin = role === 'master_admin';
+          const isDBA = role === 'dba';
+          const isAdmin = role === 'admin' || isMasterAdmin;
+          vanshParam = isMasterAdmin || isDBA ? '' : (isAdmin ? normalizedManaged : normalizedUserVansh);
+          setEffectiveVansh(vanshParam);
+        } catch (meErr) {
+          // If we cannot resolve user info, proceed without vansh param
+          console.warn('Unable to resolve user vansh for member details:', meErr);
+        }
+
+        const params = vanshParam ? { params: { vansh: vanshParam } } : {};
+
         const [memberResponse, membersResponse] = await Promise.all([
-          api.get(`/api/family/members/by-serno/${serNo}`),
-          api.get('/api/family/members')
+          api.get(`/api/family/members/by-serno/${serNo}`, params),
+          api.get('/api/family/members', params)
         ]);
 
         const currentMember = memberResponse.data?.member || null;

@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import { MongoClient } from 'mongodb';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import createAuthRouter from './routes/auth.js';
 import newsRouter from './routes/news.js';
 import eventsRouter from './routes/events.js';
@@ -12,6 +14,9 @@ import fs from 'fs';
 import { verifyToken, requireDBA, requireAdmin } from './middleware/auth.js';
 import { upload, parseNestedFields } from './middleware/upload.js';
 import { transformMemberForTree, transformMembersForTree, buildTreeStructure, getMembersByLevel } from './utils/memberTransform.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 
@@ -41,16 +46,21 @@ let db;
 
 async function connectToMongo() {
   if (db) return db;
-  client = new MongoClient(mongoUri);
-  await client.connect();
-  db = client.db(dbName);
   try {
-    // Ensure unique index for dedupe on GogteKulamandalFamily
-    await db.collection(collectionName).createIndex({ _sheetRowKey: 1 }, { unique: true, name: 'uniq_sheet_row_key' });
-  } catch (e) {
-    // ignore index errors if already exists
+    client = new MongoClient(mongoUri);
+    await client.connect();
+    db = client.db(dbName);
+    try {
+      // Ensure unique index for dedupe on GogteKulamandalFamily
+      await db.collection(collectionName).createIndex({ _sheetRowKey: 1 }, { unique: true, name: 'uniq_sheet_row_key' });
+    } catch (e) {
+      // ignore index errors if already exists
+    }
+    return db;
+  } catch (error) {
+    console.error('MongoDB connection failed:', error);
+    throw error;
   }
-  return db;
 }
 
 // Utility: convert flat objects with dot-notation keys into nested objects
@@ -135,11 +145,15 @@ const getAdminVanshFilterFromRequest = (req) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
     if (decoded.role === 'admin') {
+      // Prefer managed vansh from token; fall back to query param if provided
       const normalized = decoded.managedVansh === undefined || decoded.managedVansh === null ? '' : `${decoded.managedVansh}`.trim();
-      if (!normalized) {
+      const queryVansh = req.query?.vansh === undefined || req.query?.vansh === null ? '' : `${req.query.vansh}`.trim();
+      const vanshValue = normalized || queryVansh;
+      if (!vanshValue) {
+        // No vansh assignment and none provided; keep behavior requiring assignment
         return { filter: null, requireAssignment: true };
       }
-      const filter = buildAdminVanshFilter(normalized);
+      const filter = buildAdminVanshFilter(vanshValue);
       return { filter, requireAssignment: false };
     }
     return { filter: null, requireAssignment: false };
@@ -693,7 +707,12 @@ app.get('/api/dba/family-members/:id', verifyToken, requireDBA, async (req, res)
 
 // Test endpoint to check if API is working
 app.get('/api/dba/test', verifyToken, requireDBA, async (req, res) => {
-  res.json({ message: 'DBA API is working', timestamp: new Date().toISOString() });
+  try {
+    res.json({ message: 'DBA API is working', timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('Error in DBA test endpoint:', error);
+    res.status(500).json({ error: 'DBA test endpoint failed', details: error.message });
+  }
 });
 
 // Get member relationships (DBA only)
@@ -792,14 +811,24 @@ app.get('/api/dba/stats', verifyToken, requireDBA, async (req, res) => {
 
 // Simple test endpoint (no auth required)
 app.get('/api/test', (req, res) => {
-  res.json({ message: 'Server is running', timestamp: new Date().toISOString() });
+  try {
+    res.json({ message: 'Server is running', timestamp: new Date().toISOString() });
+  } catch (error) {
+    console.error('Error responding to /api/test:', error);
+    res.status(500).json({ error: 'Health check failed', details: error.message });
+  }
 });
 
 // Make connectToMongo available to routes BEFORE mounting them
 app.use(async (req, res, next) => {
-  req.app.locals.connectToMongo = connectToMongo;
-  req.app.locals.db = await connectToMongo();
-  next();
+  try {
+    req.app.locals.connectToMongo = connectToMongo;
+    req.app.locals.db = await connectToMongo();
+    next();
+  } catch (error) {
+    console.error('Error attaching Mongo connection to request:', error);
+    next(error);
+  }
 });
 
 app.use('/api/auth', createAuthRouter(connectToMongo));
@@ -1648,6 +1677,35 @@ app.get('/api/family/registrations', async (req, res) => {
   }
 });
 
+// Proxy PATCH/PUT requests for registration status to form server
+app.patch('/api/family/registrations/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const FORM_SERVER_PORT = process.env.FORM_SERVER_PORT || process.env.FORM_PORT || '5000';
+    const formServerUrl = `http://localhost:${FORM_SERVER_PORT}/api/family/registrations/${id}/status`;
+    
+    console.log(`[proxy] Forwarding PATCH request to form server: ${formServerUrl}`);
+    console.log(`[proxy] Request body:`, req.body);
+    
+    const response = await fetch(formServerUrl, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(req.body)
+    });
+    
+    const data = await response.json();
+    console.log(`[proxy] Response status: ${response.status}`);
+    console.log(`[proxy] Response data:`, data);
+    res.status(response.status).json(data);
+  } catch (err) {
+    console.error('[proxy] Error forwarding to form server:', err);
+    console.error('[proxy] Error stack:', err.stack);
+    res.status(500).json({ success: false, error: 'Failed to update registration status', details: err.message });
+  }
+});
+
 app.get('/api/family/all', async (req, res) => {
   try {
     const database = await connectToMongo();
@@ -1712,6 +1770,81 @@ app.get('/api/family/rejected', async (req, res) => {
   }
 });
 
+// Proxy PUT requests for member updates to form server
+app.put('/api/family/members/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const FORM_SERVER_PORT = process.env.FORM_SERVER_PORT || process.env.FORM_PORT || '5000';
+    const formServerUrl = `http://localhost:${FORM_SERVER_PORT}/api/family/members/${id}`;
+    
+    console.log(`[proxy] Forwarding PUT request to form server: ${formServerUrl}`);
+    
+    const response = await fetch(formServerUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(req.body)
+    });
+    
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    console.error('[proxy] Error forwarding to form server:', err);
+    res.status(500).json({ success: false, error: 'Failed to update member', details: err.message });
+  }
+});
+
+// Proxy DELETE requests for members to form server
+app.delete('/api/family/members/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const FORM_SERVER_PORT = process.env.FORM_SERVER_PORT || process.env.FORM_PORT || '5000';
+    const formServerUrl = `http://localhost:${FORM_SERVER_PORT}/api/family/members/${id}`;
+    
+    console.log(`[proxy] Forwarding DELETE request to form server: ${formServerUrl}`);
+    
+    const response = await fetch(formServerUrl, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+    
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    console.error('[proxy] Error forwarding to form server:', err);
+    res.status(500).json({ success: false, error: 'Failed to delete member', details: err.message });
+  }
+});
+
+// Proxy DELETE requests to clear rejected members list
+app.delete('/api/family/rejected', async (req, res) => {
+  try {
+    const FORM_SERVER_PORT = process.env.FORM_SERVER_PORT || process.env.FORM_PORT || '5000';
+    const vansh = req.query.vansh;
+    const queryString = vansh ? `?vansh=${encodeURIComponent(vansh)}` : '';
+    const formServerUrl = `http://localhost:${FORM_SERVER_PORT}/api/family/rejected${queryString}`;
+    
+    console.log(`[proxy] Forwarding DELETE rejected list request to form server: ${formServerUrl}`);
+    
+    const response = await fetch(formServerUrl, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization || ''
+      }
+    });
+    
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    console.error('[proxy] Error forwarding to form server:', err);
+    res.status(500).json({ success: false, error: 'Failed to clear rejected list', details: err.message });
+  }
+});
+
 const port = process.env.PORT || 4000;
 app.listen(port, () => {
   console.log(`Backend listening on port ${port}`);
@@ -1730,4 +1863,28 @@ app.listen(port, () => {
   console.log(`  GET http://localhost:${port}/api/family/rejected?vansh=61`);
 });
 
+// Spin up the form backend inside the same process for unified deployment
+const startFormBackendInProcess = async () => {
+  try {
+    console.log('[startup] Attempting to start form backend...');
+    if (!process.env.FORM_SERVER_PORT) {
+      process.env.FORM_SERVER_PORT = process.env.FORM_PORT || '5000';
+    }
+    console.log(`[startup] Form server will use port: ${process.env.FORM_SERVER_PORT}`);
+    
+    // Construct absolute path to form server
+    const formServerPath = join(__dirname, 'form', 'server', 'server.js');
+    console.log(`[startup] Loading form server from: ${formServerPath}`);
+    
+    // Import using file:// URL for Windows compatibility
+    const formServerUrl = new URL(`file:///${formServerPath.replace(/\\/g, '/')}`);
+    await import(formServerUrl);
+    console.log(`✅ [startup] Form backend successfully started on port ${process.env.FORM_SERVER_PORT}`);
+  } catch (error) {
+    console.error('❌ Failed to start embedded form backend:', error);
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+  }
+};
 
+startFormBackendInProcess();

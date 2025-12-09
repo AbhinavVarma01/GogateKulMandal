@@ -33,9 +33,15 @@ async function check() {
     } else {
       console.log('Person with serNo 27 not found');
     }
+  } catch (error) {
+    console.error('Error while checking Ballal records:', error);
+    throw error;
   } finally {
     await client.close();
   }
 }
 
-check();
+check().catch((error) => {
+  console.error('Fatal error in check-ballal script:', error);
+  process.exit(1);
+});

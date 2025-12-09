@@ -6,6 +6,7 @@ import MultiStepForm from "../components/MultiStepForm.jsx";
 import ParentAutocomplete from "../components/ParentAutocomplete.jsx";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { motion } from "framer-motion";
+import api from "../utils/api";
 
 // Image compression utility
 const compressImage = (file, maxWidth = 800, maxHeight = 800, quality = 0.8) => {
@@ -494,6 +495,8 @@ export default function FamilyFormPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState("");
   const [fatherSelected, setFatherSelected] = useState(false);
   const [motherSelected, setMotherSelected] = useState(false);
 
@@ -513,6 +516,7 @@ export default function FamilyFormPage() {
     handleSubmit,
     watch,
     setValue,
+    trigger,
     formState: { errors },
     reset,
   } = useForm({
@@ -584,7 +588,7 @@ export default function FamilyFormPage() {
 
     try {
       const formData = toFormData(data);
-      const response = await axios.post("http://localhost:5000/api/family/add", formData, {
+      const response = await api.post("/api/family/add", formData, {
         headers: { "Content-Type": "multipart/form-data" },
         timeout: 15000, // 15 second timeout (reduced from 30s)
       });
@@ -599,9 +603,11 @@ export default function FamilyFormPage() {
       }
     } catch (error) {
       console.error('Registration error:', error);
-      setSubmitMessage(
-        error.response?.data?.message || error.message || "An error occurred while submitting the form"
-      );
+      const friendlyMessage =
+        error.response?.data?.message || error.message || "An error occurred while submitting the form";
+      setSubmitMessage(friendlyMessage);
+      setErrorModalMessage(friendlyMessage);
+      setShowErrorModal(true);
     } finally {
       setIsSubmitting(false);
     }
@@ -610,6 +616,10 @@ export default function FamilyFormPage() {
   const handleModalOk = () => {
     setShowSuccessModal(false);
     navigate('/login');
+  };
+
+  const handleErrorModalClose = () => {
+    setShowErrorModal(false);
   };
 
   const shouldRequire = (fieldPath, formValuesData) => {
@@ -654,18 +664,31 @@ export default function FamilyFormPage() {
                 label="First Name"
                 register={register("personalDetails.firstName", {
                   required: "First name is required",
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "First name must contain only letters"
+                  }
                 })}
                 required
                 error={errors.personalDetails?.firstName?.message}
               />
               <TextInput
                 label="Middle Name"
-                register={register("personalDetails.middleName")}
+                register={register("personalDetails.middleName", {
+                  pattern: {
+                    value: /^[A-Za-z\s]*$/,
+                    message: "Middle name must contain only letters"
+                  }
+                })}
               />
               <TextInput
                 label="Last Name"
                 register={register("personalDetails.lastName", {
                   required: "Last name is required",
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Last name must contain only letters"
+                  }
                 })}
                 required
                 error={errors.personalDetails?.lastName?.message}
@@ -742,7 +765,10 @@ export default function FamilyFormPage() {
                 type="tel"
                 register={register("personalDetails.mobileNumber", {
                   required: "Mobile number is required",
-                  minLength: { value: 10, message: "Minimum 10 digits required" },
+                  pattern: {
+                    value: /^[0-9]{10,15}$/,
+                    message: "Mobile number must be 10-15 digits"
+                  }
                 })}
                 required
                 error={errors.personalDetails?.mobileNumber?.message}
@@ -750,12 +776,22 @@ export default function FamilyFormPage() {
               <TextInput
                 label="Alternate Mobile Number"
                 type="tel"
-                register={register("personalDetails.alternateMobileNumber")}
+                register={register("personalDetails.alternateMobileNumber", {
+                  pattern: {
+                    value: /^[0-9]{0,15}$/,
+                    message: "Mobile number must contain only digits (max 15)"
+                  }
+                })}
+                error={errors.personalDetails?.alternateMobileNumber?.message}
               />
               <TextInput
                 label="Country"
                 register={register("personalDetails.country", {
                   required: "Country is required",
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Country must contain only letters"
+                  }
                 })}
                 required
                 error={errors.personalDetails?.country?.message}
@@ -764,6 +800,10 @@ export default function FamilyFormPage() {
                 label="State"
                 register={register("personalDetails.state", {
                   required: "State is required",
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "State must contain only letters"
+                  }
                 })}
                 required
                 error={errors.personalDetails?.state?.message}
@@ -772,6 +812,10 @@ export default function FamilyFormPage() {
                 label="District"
                 register={register("personalDetails.district", {
                   required: "District is required",
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "District must contain only letters"
+                  }
                 })}
                 required
                 error={errors.personalDetails?.district?.message}
@@ -780,13 +824,22 @@ export default function FamilyFormPage() {
                 label="City"
                 register={register("personalDetails.city", {
                   required: "City is required",
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "City must contain only letters"
+                  }
                 })}
                 required
                 error={errors.personalDetails?.city?.message}
               />
               <TextInput
                 label="Area"
-                register={register("personalDetails.area")}
+                register={register("personalDetails.area", {
+                  pattern: {
+                    value: /^[A-Za-z\s]*$/,
+                    message: "Area must contain only letters"
+                  }
+                })}
               />
               <TextInput
                 label="Colony/Street"
@@ -802,8 +855,9 @@ export default function FamilyFormPage() {
               />
               <TextInput
                 label="Pin Code"
+                type="text"
                 register={register("personalDetails.pinCode", {
-                  required: "Pin code is required",
+                  required: "Pin code is required"
                 })}
                 required
                 error={errors.personalDetails?.pinCode?.message}
@@ -864,7 +918,9 @@ export default function FamilyFormPage() {
                   validate: (value) => {
                     if (!shouldRequire("marriedDetails.spouseFirstName", formValues))
                       return true;
-                    return value ? true : "First name is required";
+                    if (!value) return "First name is required";
+                    if (!/^[A-Za-z\s]+$/.test(value)) return "First name must contain only letters";
+                    return true;
                   },
                 })}
                 required={shouldRequire("marriedDetails.spouseFirstName", formValues)}
@@ -872,7 +928,13 @@ export default function FamilyFormPage() {
               />
               <TextInput
                 label="Spouse Middle Name"
-                register={register("marriedDetails.spouseMiddleName")}
+                register={register("marriedDetails.spouseMiddleName", {
+                  validate: (value) => {
+                    if (!value) return true;
+                    if (!/^[A-Za-z\s]*$/.test(value)) return "Middle name must contain only letters";
+                    return true;
+                  },
+                })}
               />
               <TextInput
                 label="Spouse Last Name"
@@ -880,7 +942,9 @@ export default function FamilyFormPage() {
                   validate: (value) => {
                     if (!shouldRequire("marriedDetails.spouseLastName", formValues))
                       return true;
-                    return value ? true : "Last name is required";
+                    if (!value) return "Last name is required";
+                    if (!/^[A-Za-z\s]+$/.test(value)) return "Last name must contain only letters";
+                    return true;
                   },
                 })}
                 required={shouldRequire("marriedDetails.spouseLastName", formValues)}
@@ -937,7 +1001,12 @@ export default function FamilyFormPage() {
               <TextInput
                 label="Spouse Mobile Number"
                 type="tel"
-                register={register("marriedDetails.spouseMobileNumber")}
+                register={register("marriedDetails.spouseMobileNumber", {
+                  pattern: {
+                    value: /^[0-9]{0,15}$/,
+                    message: "Mobile number must contain only digits (max 15)"
+                  }
+                })}
                 error={errors.marriedDetails?.spouseMobileNumber?.message}
               />
               <Controller
@@ -982,7 +1051,9 @@ export default function FamilyFormPage() {
                   validate: (value) => {
                     if (!shouldRequire("divorcedDetails.spouseFirstName", formValues))
                       return true;
-                    return value ? true : "First name is required";
+                    if (!value) return "First name is required";
+                    if (!/^[A-Za-z\s]+$/.test(value)) return "First name must contain only letters";
+                    return true;
                   },
                 })}
                 required={shouldRequire("divorcedDetails.spouseFirstName", formValues)}
@@ -990,7 +1061,13 @@ export default function FamilyFormPage() {
               />
               <TextInput
                 label="Spouse Middle Name"
-                register={register("divorcedDetails.spouseMiddleName")}
+                register={register("divorcedDetails.spouseMiddleName", {
+                  validate: (value) => {
+                    if (!value) return true;
+                    if (!/^[A-Za-z\s]*$/.test(value)) return "Middle name must contain only letters";
+                    return true;
+                  },
+                })}
               />
               <TextInput
                 label="Spouse Last Name"
@@ -998,7 +1075,9 @@ export default function FamilyFormPage() {
                   validate: (value) => {
                     if (!shouldRequire("divorcedDetails.spouseLastName", formValues))
                       return true;
-                    return value ? true : "Last name is required";
+                    if (!value) return "Last name is required";
+                    if (!/^[A-Za-z\s]+$/.test(value)) return "Last name must contain only letters";
+                    return true;
                   },
                 })}
                 required={shouldRequire("divorcedDetails.spouseLastName", formValues)}
@@ -1072,7 +1151,9 @@ export default function FamilyFormPage() {
                   validate: (value) => {
                     if (!shouldRequire("widowedDetails.spouseFirstName", formValues))
                       return true;
-                    return value ? true : "First name is required";
+                    if (!value) return "First name is required";
+                    if (!/^[A-Za-z\s]+$/.test(value)) return "First name must contain only letters";
+                    return true;
                   },
                 })}
                 required={shouldRequire("widowedDetails.spouseFirstName", formValues)}
@@ -1080,7 +1161,13 @@ export default function FamilyFormPage() {
               />
               <TextInput
                 label="Late Spouse Middle Name"
-                register={register("widowedDetails.spouseMiddleName")}
+                register={register("widowedDetails.spouseMiddleName", {
+                  validate: (value) => {
+                    if (!value) return true;
+                    if (!/^[A-Za-z\s]*$/.test(value)) return "Middle name must contain only letters";
+                    return true;
+                  },
+                })}
               />
               <TextInput
                 label="Late Spouse Last Name"
@@ -1088,7 +1175,9 @@ export default function FamilyFormPage() {
                   validate: (value) => {
                     if (!shouldRequire("widowedDetails.spouseLastName", formValues))
                       return true;
-                    return value ? true : "Last name is required";
+                    if (!value) return "Last name is required";
+                    if (!/^[A-Za-z\s]+$/.test(value)) return "Last name must contain only letters";
+                    return true;
                   },
                 })}
                 required={shouldRequire("widowedDetails.spouseLastName", formValues)}
@@ -1158,7 +1247,12 @@ export default function FamilyFormPage() {
               <TextInput
                 label="Late Spouse Mobile Number"
                 type="tel"
-                register={register("widowedDetails.spouseMobileNumber")}
+                register={register("widowedDetails.spouseMobileNumber", {
+                  pattern: {
+                    value: /^[0-9]{0,15}$/,
+                    message: "Mobile number must contain only digits (max 15)"
+                  }
+                })}
                 error={errors.widowedDetails?.spouseMobileNumber?.message}
               />
               <Controller
@@ -1203,7 +1297,9 @@ export default function FamilyFormPage() {
                   validate: (value) => {
                     if (!shouldRequire("remarriedDetails.spouseFirstName", formValues))
                       return true;
-                    return value ? true : "First name is required";
+                    if (!value) return "First name is required";
+                    if (!/^[A-Za-z\s]+$/.test(value)) return "First name must contain only letters";
+                    return true;
                   },
                 })}
                 required={shouldRequire("remarriedDetails.spouseFirstName", formValues)}
@@ -1211,7 +1307,13 @@ export default function FamilyFormPage() {
               />
               <TextInput
                 label="Spouse Middle Name"
-                register={register("remarriedDetails.spouseMiddleName")}
+                register={register("remarriedDetails.spouseMiddleName", {
+                  validate: (value) => {
+                    if (!value) return true;
+                    if (!/^[A-Za-z\s]*$/.test(value)) return "Middle name must contain only letters";
+                    return true;
+                  },
+                })}
               />
               <TextInput
                 label="Spouse Last Name"
@@ -1219,7 +1321,9 @@ export default function FamilyFormPage() {
                   validate: (value) => {
                     if (!shouldRequire("remarriedDetails.spouseLastName", formValues))
                       return true;
-                    return value ? true : "Last name is required";
+                    if (!value) return "Last name is required";
+                    if (!/^[A-Za-z\s]+$/.test(value)) return "Last name must contain only letters";
+                    return true;
                   },
                 })}
                 required={shouldRequire("remarriedDetails.spouseLastName", formValues)}
@@ -1276,7 +1380,12 @@ export default function FamilyFormPage() {
               <TextInput
                 label="Spouse Mobile Number"
                 type="tel"
-                register={register("remarriedDetails.spouseMobileNumber")}
+                register={register("remarriedDetails.spouseMobileNumber", {
+                  pattern: {
+                    value: /^[0-9]{0,15}$/,
+                    message: "Mobile number must contain only digits (max 15)"
+                  }
+                })}
                 error={errors.remarriedDetails?.spouseMobileNumber?.message}
               />
               <Controller
@@ -1317,7 +1426,9 @@ export default function FamilyFormPage() {
                     setValue("parentsInformation.fatherMiddleName", data.middleName || "", { shouldValidate: true, shouldDirty: true });
                     setValue("parentsInformation.fatherLastName", data.lastName || "", { shouldValidate: true, shouldDirty: true });
                     setValue("parentsInformation.fatherEmail", data.email || "", { shouldValidate: true, shouldDirty: true });
-                    setValue("parentsInformation.fatherMobileNumber", data.mobileNumber || "", { shouldValidate: true, shouldDirty: true });
+                    // Mask mobile number - show only last 4 digits
+                    const maskedFatherMobile = data.mobileNumber ? data.mobileNumber.slice(-4).padStart(data.mobileNumber.length, '*') : "";
+                    setValue("parentsInformation.fatherMobileNumber", maskedFatherMobile, { shouldValidate: true, shouldDirty: true });
                     setValue("parentsInformation.fatherDateOfBirth", data.dateOfBirth ? data.dateOfBirth.slice(0, 10) : "", { shouldValidate: true, shouldDirty: true });
 
                     if (data.profileImage) {
@@ -1361,6 +1472,10 @@ export default function FamilyFormPage() {
                 label="Father's First Name"
                 register={register("parentsInformation.fatherFirstName", {
                   required: "Father's first name is required",
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Father's first name must contain only letters"
+                  }
                 })}
                 required
                 error={errors.parentsInformation?.fatherFirstName?.message}
@@ -1368,13 +1483,22 @@ export default function FamilyFormPage() {
               />
               <TextInput
                 label="Father's Middle Name"
-                register={register("parentsInformation.fatherMiddleName")}
+                register={register("parentsInformation.fatherMiddleName", {
+                  pattern: {
+                    value: /^[A-Za-z\s]*$/,
+                    message: "Father's middle name must contain only letters"
+                  }
+                })}
                 disabled={fatherSelected}
               />
               <TextInput
                 label="Father's Last Name"
                 register={register("parentsInformation.fatherLastName", {
                   required: "Father's last name is required",
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Father's last name must contain only letters"
+                  }
                 })}
                 required
                 error={errors.parentsInformation?.fatherLastName?.message}
@@ -1390,7 +1514,12 @@ export default function FamilyFormPage() {
               <TextInput
                 label="Father's Mobile Number"
                 type="tel"
-                register={register("parentsInformation.fatherMobileNumber")}
+                register={register("parentsInformation.fatherMobileNumber", {
+                  pattern: {
+                    value: /^[0-9*]{0,15}$/,
+                    message: "Invalid mobile number format"
+                  }
+                })}
                 error={errors.parentsInformation?.fatherMobileNumber?.message}
                 disabled={fatherSelected}
               />
@@ -1430,7 +1559,9 @@ export default function FamilyFormPage() {
                     setValue("parentsInformation.motherFirstName", data.firstName || "", { shouldValidate: true, shouldDirty: true });
                     setValue("parentsInformation.motherMiddleName", data.middleName || "", { shouldValidate: true, shouldDirty: true });
                     setValue("parentsInformation.motherLastName", data.lastName || "", { shouldValidate: true, shouldDirty: true });
-                    setValue("parentsInformation.motherMobileNumber", data.mobileNumber || "", { shouldValidate: true, shouldDirty: true });
+                    // Mask mobile number - show only last 4 digits
+                    const maskedMotherMobile = data.mobileNumber ? data.mobileNumber.slice(-4).padStart(data.mobileNumber.length, '*') : "";
+                    setValue("parentsInformation.motherMobileNumber", maskedMotherMobile, { shouldValidate: true, shouldDirty: true });
                     setValue("parentsInformation.motherDateOfBirth", data.dateOfBirth ? data.dateOfBirth.slice(0, 10) : "", { shouldValidate: true, shouldDirty: true });
 
                     if (data.profileImage) {
@@ -1474,6 +1605,10 @@ export default function FamilyFormPage() {
                 label="Mother's First Name"
                 register={register("parentsInformation.motherFirstName", {
                   required: "Mother's first name is required",
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Mother's first name must contain only letters"
+                  }
                 })}
                 required
                 error={errors.parentsInformation?.motherFirstName?.message}
@@ -1481,13 +1616,22 @@ export default function FamilyFormPage() {
               />
               <TextInput
                 label="Mother's Middle Name"
-                register={register("parentsInformation.motherMiddleName")}
+                register={register("parentsInformation.motherMiddleName", {
+                  pattern: {
+                    value: /^[A-Za-z\s]*$/,
+                    message: "Mother's middle name must contain only letters"
+                  }
+                })}
                 disabled={motherSelected}
               />
               <TextInput
                 label="Mother's Last Name"
                 register={register("parentsInformation.motherLastName", {
                   required: "Mother's last name is required",
+                  pattern: {
+                    value: /^[A-Za-z\s]+$/,
+                    message: "Mother's last name must contain only letters"
+                  }
                 })}
                 required
                 error={errors.parentsInformation?.motherLastName?.message}
@@ -1496,7 +1640,12 @@ export default function FamilyFormPage() {
               <TextInput
                 label="Mother's Mobile Number"
                 type="tel"
-                register={register("parentsInformation.motherMobileNumber")}
+                register={register("parentsInformation.motherMobileNumber", {
+                  pattern: {
+                    value: /^[0-9*]{0,15}$/,
+                    message: "Invalid mobile number format"
+                  }
+                })}
                 error={errors.parentsInformation?.motherMobileNumber?.message}
                 disabled={motherSelected}
               />
@@ -1590,18 +1739,35 @@ export default function FamilyFormPage() {
 
   const visibleSections = getVisibleSections();
 
-  const handleNext = () => {
-    // Require Vansh before moving from Personal Details step
-    if (currentStep === 1) {
-      const vanshValue = formValues.personalDetails?.vansh;
-      if (!vanshValue || vanshValue === "" || vanshValue === 0) {
-        setSubmitMessage("Please enter your Vansh before proceeding to the next step");
-        // Scroll to top immediately
-        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
-        return;
-      }
+  const handleNext = async () => {
+    // Get the current section ID
+    const currentSectionId = visibleSections[currentStep - 1]?.id;
+    
+    // Trigger validation for the current section
+    let isValid = false;
+    
+    if (currentSectionId === SECTION_IDS.PERSONAL) {
+      isValid = await trigger("personalDetails");
+    } else if (currentSectionId === SECTION_IDS.MARRIED) {
+      isValid = await trigger("marriedDetails");
+    } else if (currentSectionId === SECTION_IDS.DIVORCED) {
+      isValid = await trigger("divorcedDetails");
+    } else if (currentSectionId === SECTION_IDS.WIDOWED) {
+      isValid = await trigger("widowedDetails");
+    } else if (currentSectionId === SECTION_IDS.REMARRIED) {
+      isValid = await trigger("remarriedDetails");
+    } else if (currentSectionId === SECTION_IDS.PARENTS) {
+      isValid = await trigger("parentsInformation");
     }
     
+    // If validation fails, show error and scroll to top
+    if (!isValid) {
+      setSubmitMessage("Please fill in all required fields marked with * before proceeding");
+      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      return;
+    }
+    
+    // Move to next step if validation passes
     if (currentStep < visibleSections.length) {
       setCurrentStep(currentStep + 1);
       setSubmitMessage(""); // Clear any previous messages
@@ -1734,6 +1900,51 @@ export default function FamilyFormPage() {
               <button
                 onClick={handleModalOk}
                 className="w-full bg-amber-500 text-white font-medium py-3 px-6 rounded-lg shadow hover:bg-amber-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2"
+              >
+                OK
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+          >
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
+                <svg
+                  className="h-8 w-8 text-red-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </div>
+
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                Please review your submission
+              </h3>
+
+              <p className="text-slate-600 mb-6 leading-relaxed">
+                {errorModalMessage || "Fill all the important credentials before submitting the form."}
+              </p>
+
+              <button
+                onClick={handleErrorModalClose}
+                className="w-full bg-red-500 text-white font-medium py-3 px-6 rounded-lg shadow hover:bg-red-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2"
               >
                 OK
               </button>

@@ -11,6 +11,7 @@ const NewsSchema = new mongoose.Schema({
   publishDate: { type: Date, default: Date.now },
   priority: { type: String, enum: ['Low', 'Medium', 'High', 'Urgent'], default: 'Medium' },
   tags: [{ type: String, trim: true }],
+  vansh: { type: Number, default: null },
   likes: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, date: { type: Date, default: Date.now } }],
   comments: [{ user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, text: { type: String, required: true, maxlength: 500 }, date: { type: Date, default: Date.now } }],
   views: { type: Number, default: 0 }
@@ -19,5 +20,12 @@ const NewsSchema = new mongoose.Schema({
 NewsSchema.index({ title: 'text', content: 'text' });
 NewsSchema.index({ category: 1, publishDate: -1 });
 
-export default mongoose.model('News', NewsSchema);
+let NewsModel;
+try {
+  NewsModel = mongoose.models.News || mongoose.model('News', NewsSchema);
+} catch (error) {
+  console.error('Failed to initialize News model:', error);
+  throw error;
+}
 
+export default NewsModel;

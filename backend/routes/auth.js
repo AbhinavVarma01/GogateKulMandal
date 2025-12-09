@@ -98,6 +98,17 @@ export default function createAuthRouter(connectToMongo) {
     'Passcode',
     'PassCode'
   ];
+  
+  const extractPassword = (userDoc) => findFieldValue(userDoc, passwordFields);
+  const buildPasswordUpdate = (newPassword) => {
+    const update = {};
+    passwordFields.forEach((field) => {
+      update[field] = newPassword;
+    });
+    update.updatedAt = new Date();
+    update.passwordUpdatedAt = new Date();
+    return update;
+  };
 
   router.post('/register', async (req, res) => {
     try {
@@ -360,6 +371,64 @@ export default function createAuthRouter(connectToMongo) {
     }
   });
 
+  router.post('/change-password', async (req, res) => {
+    try {
+      const token = req.headers.authorization?.split(' ')[1];
+      if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+      }
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret');
+      const { currentPassword, newPassword } = req.body || {};
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: 'Current password and new password are required' });
+      }
+
+      // Master admin password is defined via env; do not change it here.
+      if (decoded.sub === 'master_admin' || decoded.role === 'master_admin') {
+        if (currentPassword !== masterAdminPassword) {
+          return res.status(400).json({ message: 'Current password is incorrect' });
+        }
+        return res.status(400).json({ message: 'Master admin password cannot be changed from this endpoint' });
+      }
+
+      const db = await connectToMongo();
+      const usersCollection = await getUsersCollection(db);
+      const loginCollection = db.collection('login');
+
+      let user = null;
+      if (decoded.sub) {
+        user = await usersCollection.findOne({ _id: new ObjectId(decoded.sub) });
+        if (!user) {
+          user = await loginCollection.findOne({ _id: new ObjectId(decoded.sub) });
+        }
+      }
+
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      const storedPassword = extractPassword(user);
+      if (!storedPassword) {
+        return res.status(400).json({ message: 'No password is set for this account' });
+      }
+      if (String(storedPassword) !== String(currentPassword)) {
+        return res.status(400).json({ message: 'Current password is incorrect' });
+      }
+
+      const update = buildPasswordUpdate(newPassword);
+      const targetCollection = user._id && usersCollection ? usersCollection : loginCollection;
+      await targetCollection.updateOne(
+        { _id: user._id },
+        { $set: update }
+      );
+
+      return res.json({ message: 'Password updated successfully' });
+    } catch (err) {
+      console.error('[auth] change-password error', err);
+      return res.status(500).json({ message: 'Failed to change password' });
+    }
+  });
+
   router.get('/me', async (req, res) => {
     try {
       const token = req.headers.authorization?.split(' ')[1];
@@ -431,23 +500,57 @@ export default function createAuthRouter(connectToMongo) {
       if (member) {
         // Extract from personalDetails (nested structure)
         firstName = member.personalDetails?.firstName || member.personalDetails?.FirstName || '';
-        memberVanshNo = member.personalDetails?.vansh || member.personalDetails?.Vansh || null;
+        const middleName = member.personalDetails?.middleName || '';
+        const lastName = member.personalDetails?.lastName || '';
+        memberVanshNo = member.personalDetails?.vansh || member.personalDetails?.Vansh || member.vansh || member.Vansh || null;
         email = member.personalDetails?.email || member.personalDetails?.Email || '';
+        const phone = member.personalDetails?.mobileNumber || '';
+        const dateOfBirth = member.personalDetails?.dateOfBirth || '';
+        const occupation = member.personalDetails?.profession || '';
+        const maritalStatus = member.personalDetails?.everMarried || 'Single';
+        const profileImage = member.personalDetails?.profileImage || null;
+        
+        // Address details
+        const address = {
+          street: member.personalDetails?.colonyStreet || '',
+          city: member.personalDetails?.city || '',
+          state: member.personalDetails?.state || '',
+          pincode: member.personalDetails?.pinCode || '',
+          country: member.personalDetails?.country || 'India'
+        };
+        
+        console.log('[auth/me] Returning managedVansh:', managedVansh, 'for user:', username);
+        return res.json({
+          firstName: firstName,
+          middleName: middleName,
+          lastName: lastName,
+          VanshNo: memberVanshNo,
+          username: username,
+          email: email,
+          phone: phone,
+          dateOfBirth: dateOfBirth,
+          occupation: occupation,
+          maritalStatus: maritalStatus,
+          profilePicture: profileImage, // Return full image object with data and mimeType
+          address: address,
+          role: user.role || user.Role || 'user',
+          managedVansh: managedVansh
+        });
       } else {
         // Fallback to login user data
         firstName = user.firstName || user.FirstName || user.firstname || '';
         email = user.email || user.Email || '';
+        
+        console.log('[auth/me] Returning managedVansh:', managedVansh, 'for user:', username);
+        return res.json({
+          firstName: firstName,
+          VanshNo: memberVanshNo,
+          username: username,
+          email: email,
+          role: user.role || user.Role || 'user',
+          managedVansh: managedVansh
+        });
       }
-      
-      console.log('[auth/me] Returning managedVansh:', managedVansh, 'for user:', username);
-      return res.json({
-        firstName: firstName,
-        VanshNo: memberVanshNo,
-        username: username,
-        email: email,
-        role: user.role || user.Role || 'user',
-        managedVansh: managedVansh
-      });
     } catch (err) {
       console.error('[auth/me] error', err);
       return res.status(500).json({ message: 'Server error' });

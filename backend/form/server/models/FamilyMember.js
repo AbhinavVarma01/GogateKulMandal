@@ -117,12 +117,14 @@ const parentsInformationSchema = new mongoose.Schema(
     fatherMobileNumber: { type: String },
     fatherDateOfBirth: { type: Date },
     fatherProfileImage: imageSchema,
+    fatherSerNo: { type: Number }, // Link to father's serNo in family tree
     motherFirstName: { type: String, required: true },
     motherMiddleName: String,
     motherLastName: { type: String, required: true },
     motherMobileNumber: { type: String },
     motherDateOfBirth: { type: Date },
     motherProfileImage: imageSchema,
+    motherSerNo: { type: Number }, // Link to mother's serNo in family tree
   },
   { _id: false }
 );
@@ -151,6 +153,12 @@ const familyMemberSchema = new mongoose.Schema(
   { timestamps: true, collection: "Heirarchy_form" }
 );
 
-const FamilyMember = mongoose.model("FamilyMember", familyMemberSchema);
+let FamilyMember;
+try {
+  FamilyMember = mongoose.models.FamilyMember || mongoose.model("FamilyMember", familyMemberSchema);
+} catch (error) {
+  console.error("Failed to initialize FamilyMember model:", error);
+  throw error;
+}
 
 export default FamilyMember;

@@ -17,6 +17,9 @@ async function withDb(handler) {
     await client.connect();
     const db = client.db(dbName);
     return await handler(db);
+  } catch (error) {
+    console.error('Error during database operation:', error);
+    throw error;
   } finally {
     await client.close();
   }
@@ -165,13 +168,18 @@ const mode = process.argv[2] || 'inspect';
 const value = process.argv[3] || 'umesh_8883';
 
 (async () => {
-  if (mode === 'list') {
-    await listCollections();
-  } else if (mode === 'ensure-admins') {
-    await ensureAdmins();
-  } else if (mode === 'show-admins') {
-    await showAdmins();
-  } else {
-    await inspectUser(value);
+  try {
+    if (mode === 'list') {
+      await listCollections();
+    } else if (mode === 'ensure-admins') {
+      await ensureAdmins();
+    } else if (mode === 'show-admins') {
+      await showAdmins();
+    } else {
+      await inspectUser(value);
+    }
+  } catch (error) {
+    console.error('Fatal error in check-user script:', error);
+    process.exit(1);
   }
 })();

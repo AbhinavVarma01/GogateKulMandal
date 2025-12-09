@@ -1,5 +1,5 @@
 import express from "express";
-import { addFamilyMember, getAllFamilyMembers, getAllRegistrations, getRegistrationById, getRejectedMembers, updateRegistrationStatus, searchParents, getMemberById, updateMember, deleteMember } from "../controllers/familyController.js";
+import { addFamilyMember, getAllFamilyMembers, getAllRegistrations, getRegistrationById, getRejectedMembers, clearRejectedMembers, updateRegistrationStatus, searchParents, getMemberById, updateMember, deleteMember } from "../controllers/familyController.js";
 import { upload, parseNestedFields } from "../middlewares/upload.js";
 import { sendTestEmail } from "../utils/emailService.js";
 import { verifyToken } from "../middleware/verifyToken.js";
@@ -27,6 +27,7 @@ router.get("/all", verifyToken, restrictToVansh, getAllFamilyMembers);
 router.get("/registrations", verifyToken, restrictToVansh, getAllRegistrations);
 router.get("/registrations/:id", getRegistrationById); // Get single registration with images
 router.get("/rejected", verifyToken, restrictToVansh, getRejectedMembers);
+router.delete("/rejected", verifyToken, restrictToVansh, clearRejectedMembers);
 router.patch("/registrations/:id/status", updateRegistrationStatus);
 router.get("/search", searchParents);
 

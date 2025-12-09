@@ -54,14 +54,14 @@ const AccessibilityToolbar = () => {
     <>
       {/* Floating Accessibility Button */}
       <div 
-        className={`fixed right-6 transition-all duration-300 z-[100] ${
+        className={`fixed right-4 left-4 sm:left-auto transition-all duration-300 z-[100] ${
           isExpanded ? 'bottom-6' : 'bottom-6'
         }`}
         ref={toolbarRef}
       >
         {/* Main Toolbar Panel */}
         {isExpanded && (
-          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 mb-4 w-80 animate-fadeIn">
+          <div className="bg-white rounded-xl shadow-2xl border border-gray-200 p-4 mb-4 w-full sm:w-80 max-h-[80vh] overflow-y-auto animate-fadeIn">
             {/* Header */}
             <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-200">
               <div className="flex items-center space-x-2">

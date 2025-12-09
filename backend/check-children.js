@@ -27,9 +27,15 @@ async function check() {
       console.log('  fatherSerNo:', ramkrishna.fatherSerNo);
       console.log('  Should be child of 28?', ramkrishna.fatherSerNo === 28);
     }
+  } catch (error) {
+    console.error('Error while checking children data:', error);
+    throw error;
   } finally {
     await client.close();
   }
 }
 
-check();
+check().catch((error) => {
+  console.error('Fatal error in check-children script:', error);
+  process.exit(1);
+});

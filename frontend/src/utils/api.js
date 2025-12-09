@@ -1,12 +1,16 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const API_BASE_URL =
+  (import.meta.env.VITE_API_URL || process.env.REACT_APP_API_URL || '').trim() || '';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 0,
   headers: {
     'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
   },
 });
 
@@ -48,11 +52,21 @@ api.interceptors.response.use(
 export default api;
 
 export async function apiLogin(email, password) {
-  const res = await api.post('/api/auth/login', { email, password });
-  return res.data;
+  try {
+    const res = await api.post('/api/auth/login', { email, password });
+    return res.data;
+  } catch (error) {
+    console.error('Login request failed:', error);
+    throw error;
+  }
 }
 
 export async function apiRegister(payload) {
-  const res = await api.post('/api/auth/register', payload);
-  return res.data;
+  try {
+    const res = await api.post('/api/auth/register', payload);
+    return res.data;
+  } catch (error) {
+    console.error('Registration request failed:', error);
+    throw error;
+  }
 }

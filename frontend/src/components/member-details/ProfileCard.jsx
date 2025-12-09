@@ -61,12 +61,12 @@ const ProfileCard = ({ member }) => {
   return (
     <div className="rounded-2xl border border-[#f0e0d4] bg-white/90 p-6 shadow-[0_1px_8px_rgba(0,0,0,0.05)] backdrop-blur-sm transition-all duration-200 ease-out hover:scale-[1.01] hover:shadow-md">
       <div className="flex flex-col items-center gap-4 text-center">
-        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#f9ede3] to-white">
+        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#f9ede3] to-white p-1">
           {personal?.profileImage?.data ? (
             <img
               src={`data:${personal.profileImage.mimeType};base64,${personal.profileImage.data}`}
               alt={fullName || 'Member avatar'}
-              className="h-full w-full object-cover"
+              className="h-full w-full rounded-full object-contain"
             />
           ) : (
             <User className="h-8 w-8 text-[#d89a71]" />

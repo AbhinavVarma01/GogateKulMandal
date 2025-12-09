@@ -22,12 +22,12 @@ const RelationCard = ({ relation }) => {
       className="group flex min-h-[110px] flex-col gap-3 rounded-xl border border-[#f0e0d4] bg-white p-3 text-left shadow-[0_1px_4px_rgba(0,0,0,0.04)] transition-all duration-200 ease-out hover:-translate-y-[1px] hover:border-[#e97d43] hover:bg-[#fff7f2] hover:shadow-md"
     >
       <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#f9ede3] to-white shadow-inner">
+        <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-[#f9ede3] to-white shadow-inner p-1">
           {personal?.profileImage?.data ? (
             <img
               src={`data:${personal.profileImage.mimeType};base64,${personal.profileImage.data}`}
               alt={name}
-              className="h-full w-full object-cover"
+              className="h-full w-full rounded-full object-contain"
             />
           ) : (
             <User className="h-5 w-5 text-[#d89a71]" />

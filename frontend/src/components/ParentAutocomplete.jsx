@@ -204,7 +204,9 @@ const ParentAutocomplete = ({
                       <p className="text-xs text-slate-600">{suggestion.email}</p>
                     )}
                     {suggestion.mobileNumber && (
-                      <p className="text-xs text-slate-500">{suggestion.mobileNumber}</p>
+                      <p className="text-xs text-slate-500">
+                        {suggestion.mobileNumber.replace(/\d(?=\d{2})/g, '*')}
+                      </p>
                     )}
                   </div>
                 </button>

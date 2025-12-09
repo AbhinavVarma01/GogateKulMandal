@@ -21,6 +21,7 @@ const EventSchema = new mongoose.Schema({
   coOrganizers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   images: [{ media_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Media' } }],
   isPublic: { type: Boolean, default: true },
+  vansh: { type: Number, default: null },
   vanshNumber: { type: Number, default: null },
   maxAttendees: { type: Number, default: null },
   attendees: [{
@@ -41,4 +42,12 @@ const EventSchema = new mongoose.Schema({
 EventSchema.index({ startDate: 1, endDate: 1 });
 EventSchema.index({ eventType: 1, startDate: 1 });
 
-export default mongoose.model('Event', EventSchema);
+let EventModel;
+try {
+  EventModel = mongoose.models.Event || mongoose.model('Event', EventSchema);
+} catch (error) {
+  console.error('Failed to initialize Event model:', error);
+  throw error;
+}
+
+export default EventModel;

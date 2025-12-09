@@ -34,9 +34,15 @@ async function check() {
       console.log('  vansh:', wife.vansh);
       console.log('  personalDetails.vansh:', wife.personalDetails?.vansh);
     }
+  } catch (error) {
+    console.error('Error while verifying vansh data:', error);
+    throw error;
   } finally {
     await client.close();
   }
 }
 
-check();
+check().catch((error) => {
+  console.error('Fatal error in check-vansh script:', error);
+  process.exit(1);
+});

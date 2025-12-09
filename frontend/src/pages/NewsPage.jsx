@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, MapPin, User, Search, Filter, Plus, X, Clock, Upload, Image as ImageIcon } from 'lucide-react';
-import axios from 'axios';
+import api from '../utils/api';
 import Footer from '../components/Footer';
 import SuccessToast from '../components/SuccessToast';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -18,8 +18,7 @@ const AddNewsModal = ({ onClose, onSubmit }) => {
     authorVanshNo: '',
     authorName: '',
     images: [],
-    visibleToAllVansh: true,
-    isPublished: true
+    visibleToAllVansh: true
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -36,12 +35,7 @@ const AddNewsModal = ({ onClose, onSubmit }) => {
           return;
         }
 
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
-        const response = await axios.get(`${API_URL}/api/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await api.get('/api/auth/me');
 
         const user = response.data;
         console.log('Current user:', user);
@@ -308,16 +302,6 @@ const AddNewsModal = ({ onClose, onSubmit }) => {
                 className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
               />
               <span className="ml-2 text-sm text-gray-700">Visible to all Vansh</span>
-            </label>
-
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={formData.isPublished}
-                onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
-                className="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500"
-              />
-              <span className="ml-2 text-sm text-gray-700">Publish immediately</span>
             </label>
           </div>
 
@@ -638,20 +622,36 @@ export default function NewsPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [currentUserVansh, setCurrentUserVansh] = useState('');
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+  // Load current user vansh to scope news when not visibleToAllVansh
+  useEffect(() => {
+    const loadUserVansh = async () => {
+      try {
+        const res = await api.get('/api/auth/me');
+        const vansh = res.data?.VanshNo || res.data?.vansh || '';
+        setCurrentUserVansh(vansh ? `${vansh}`.trim() : '');
+      } catch (err) {
+        console.warn('Unable to fetch current user vansh for news:', err);
+        setCurrentUserVansh('');
+      }
+    };
+    loadUserVansh();
+  }, []);
 
   useEffect(() => {
     fetchNews();
-  }, [selectedCategory]);
+  }, [selectedCategory, currentUserVansh]);
 
   const fetchNews = async () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API_URL}/api/news`, {
-        params: { category: selectedCategory }
-      });
+      const params = { category: selectedCategory };
+      if (currentUserVansh) {
+        params.vansh = currentUserVansh;
+      }
+      const response = await api.get('/api/news', { params });
       
       if (response.data.success) {
         setNews(response.data.data);
@@ -666,7 +666,7 @@ export default function NewsPage() {
 
   const handleNewsClick = async (newsItem) => {
     try {
-      const response = await axios.get(`${API_URL}/api/news/${newsItem._id}`);
+      const response = await api.get(`/api/news/${newsItem._id}`);
       if (response.data.success) {
         setSelectedNews(response.data.data);
         setShowDetailModal(true);
@@ -684,11 +684,7 @@ export default function NewsPage() {
     }
 
     try {
-      await axios.post(
-        `${API_URL}/api/news`,
-        newsData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post('/api/news', newsData, { headers: { Authorization: `Bearer ${token}` } });
       
       // Refresh news list
       await fetchNews();

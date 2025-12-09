@@ -25,9 +25,15 @@ async function check() {
     if (ballal?.personalDetails) {
       console.log(Object.keys(ballal.personalDetails).join(', '));
     }
+  } catch (error) {
+    console.error('Error while checking level metadata:', error);
+    throw error;
   } finally {
     await client.close();
   }
 }
 
-check();
+check().catch((error) => {
+  console.error('Fatal error in check-level script:', error);
+  process.exit(1);
+});

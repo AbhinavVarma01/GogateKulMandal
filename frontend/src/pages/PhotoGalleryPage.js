@@ -7,7 +7,7 @@ import { AddPhotoModal } from './AddPhotoModal';
 import { PhotoCard } from './PhotoCard';
 import Footer from '../components/Footer';
 
-const API_URL = 'http://localhost:4000/api/media';
+const API_URL = (import.meta.env.VITE_API_URL || process.env.REACT_APP_API_URL || window.location.origin) + '/api/media';
 
 export default function PhotoGalleryPage() {
   const { t } = useTranslation();
@@ -521,4 +521,3 @@ export default function PhotoGalleryPage() {
     </div>
   );
 };
-

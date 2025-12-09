@@ -154,6 +154,14 @@ export const addFamilyMember = async (req, res) => {
   } catch (error) {
     console.error("❌ Error saving family member:", error.message);
     
+    if (error?.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        message: "Fill all the important credentials before submitting the form.",
+        error: error.message
+      });
+    }
+
     return res.status(500).json({ 
       success: false, 
       message: `❌ Error: ${error.message}`,
@@ -288,6 +296,8 @@ export const getRejectedMembers = async (req, res) => {
       }
     }
     
+    console.log('📋 Fetching rejected members with filter:', JSON.stringify(filter));
+    
     // Exclude base64 image fields for faster loading
     const rejectedMembers = await db.collection('rejectedMemb')
       .find(
@@ -306,9 +316,45 @@ export const getRejectedMembers = async (req, res) => {
       )
       .sort({ rejectedAt: -1 })
       .toArray();
+    
+    console.log(`✅ Found ${rejectedMembers.length} rejected members`);
     return res.status(200).json({ success: true, data: rejectedMembers });
   } catch (error) {
     console.error("❌ Error fetching rejected members:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Clear all rejected members from rejectedMemb collection
+export const clearRejectedMembers = async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    
+    let filter = { ...req.vanshFilter };
+    
+    if (!filter['personalDetails.vansh']) {
+      const vansh = req.query.vansh;
+      if (vansh) {
+        const vanshValue = parseInt(vansh, 10);
+        if (!isNaN(vanshValue)) {
+          filter['personalDetails.vansh'] = vanshValue;
+        } else {
+          filter['personalDetails.vansh'] = { $regex: new RegExp(`^${vansh}$`, 'i') };
+        }
+      }
+    }
+    
+    // Delete all rejected members matching the filter
+    const result = await db.collection('rejectedMemb').deleteMany(filter);
+    
+    console.log(`🗑️ Cleared ${result.deletedCount} rejected members`);
+    return res.status(200).json({ 
+      success: true, 
+      message: `Successfully cleared ${result.deletedCount} rejected member(s)`,
+      deletedCount: result.deletedCount 
+    });
+  } catch (error) {
+    console.error("❌ Error clearing rejected members:", error);
     return res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
@@ -373,6 +419,139 @@ export const updateRegistrationStatus = async (req, res) => {
         : 1;
       
       memberData.serNo = nextSerNo;
+      
+      // Auto-link parents in family tree - CREATE parents if they don't exist
+      if (memberData.parentsInformation) {
+        const parentsCollection = db.collection('members');
+        
+        // Handle Father
+        if (memberData.parentsInformation.fatherFirstName && memberData.parentsInformation.fatherLastName) {
+          const fatherQuery = {
+            $or: [
+              {
+                'personalDetails.firstName': memberData.parentsInformation.fatherFirstName,
+                'personalDetails.lastName': memberData.parentsInformation.fatherLastName
+              },
+              {
+                firstName: memberData.parentsInformation.fatherFirstName,
+                lastName: memberData.parentsInformation.fatherLastName
+              }
+            ]
+          };
+          
+          let father = await parentsCollection.findOne(fatherQuery);
+          
+          if (father && father.serNo) {
+            // Father exists, link him
+            memberData.parentsInformation.fatherSerNo = father.serNo;
+            memberData.fatherSerNo = father.serNo; // Also set at root level for family tree
+            console.log(`✅ Linked father with existing serNo: ${father.serNo}`);
+          } else {
+            // Father doesn't exist, CREATE him
+            const lastMemberForFather = await parentsCollection
+              .find({})
+              .sort({ serNo: -1 })
+              .limit(1)
+              .toArray();
+            
+            const fatherSerNo = lastMemberForFather.length > 0 && lastMemberForFather[0].serNo 
+              ? lastMemberForFather[0].serNo + 1 
+              : nextSerNo + 1;
+            
+            const fatherData = {
+              serNo: fatherSerNo,
+              personalDetails: {
+                firstName: memberData.parentsInformation.fatherFirstName,
+                middleName: memberData.parentsInformation.fatherMiddleName || '',
+                lastName: memberData.parentsInformation.fatherLastName,
+                gender: 'male',
+                dateOfBirth: memberData.parentsInformation.fatherDateOfBirth || null,
+                email: memberData.parentsInformation.fatherEmail || '',
+                mobileNumber: memberData.parentsInformation.fatherMobileNumber || '',
+                vansh: memberData.personalDetails.vansh
+              },
+              isapproved: true,
+              _sheetRowKey: `auto_father_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              createdAt: new Date(),
+              autoCreated: true // Mark as auto-created
+            };
+            
+            // Add father's profile image if provided
+            if (memberData.parentsInformation.fatherProfileImage) {
+              fatherData.personalDetails.profileImage = memberData.parentsInformation.fatherProfileImage;
+            }
+            
+            await parentsCollection.insertOne(fatherData);
+            memberData.parentsInformation.fatherSerNo = fatherSerNo;
+            memberData.fatherSerNo = fatherSerNo; // Also set at root level for family tree
+            console.log(`✅ Created father with new serNo: ${fatherSerNo}`);
+          }
+        }
+        
+        // Handle Mother
+        if (memberData.parentsInformation.motherFirstName && memberData.parentsInformation.motherLastName) {
+          const motherQuery = {
+            $or: [
+              {
+                'personalDetails.firstName': memberData.parentsInformation.motherFirstName,
+                'personalDetails.lastName': memberData.parentsInformation.motherLastName
+              },
+              {
+                firstName: memberData.parentsInformation.motherFirstName,
+                lastName: memberData.parentsInformation.motherLastName
+              }
+            ]
+          };
+          
+          let mother = await parentsCollection.findOne(motherQuery);
+          
+          if (mother && mother.serNo) {
+            // Mother exists, link her
+            memberData.parentsInformation.motherSerNo = mother.serNo;
+            memberData.motherSerNo = mother.serNo; // Also set at root level for family tree
+            console.log(`✅ Linked mother with existing serNo: ${mother.serNo}`);
+          } else {
+            // Mother doesn't exist, CREATE her
+            const lastMemberForMother = await parentsCollection
+              .find({})
+              .sort({ serNo: -1 })
+              .limit(1)
+              .toArray();
+            
+            const motherSerNo = lastMemberForMother.length > 0 && lastMemberForMother[0].serNo 
+              ? lastMemberForMother[0].serNo + 1 
+              : nextSerNo + 1;
+            
+            const motherData = {
+              serNo: motherSerNo,
+              personalDetails: {
+                firstName: memberData.parentsInformation.motherFirstName,
+                middleName: memberData.parentsInformation.motherMiddleName || '',
+                lastName: memberData.parentsInformation.motherLastName,
+                gender: 'female',
+                dateOfBirth: memberData.parentsInformation.motherDateOfBirth || null,
+                email: '',
+                mobileNumber: memberData.parentsInformation.motherMobileNumber || '',
+                vansh: memberData.personalDetails.vansh
+              },
+              isapproved: true,
+              _sheetRowKey: `auto_mother_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              createdAt: new Date(),
+              autoCreated: true // Mark as auto-created
+            };
+            
+            // Add mother's profile image if provided
+            if (memberData.parentsInformation.motherProfileImage) {
+              motherData.personalDetails.profileImage = memberData.parentsInformation.motherProfileImage;
+            }
+            
+            await parentsCollection.insertOne(motherData);
+            memberData.parentsInformation.motherSerNo = motherSerNo;
+            memberData.motherSerNo = motherSerNo; // Also set at root level for family tree
+            console.log(`✅ Created mother with new serNo: ${motherSerNo}`);
+          }
+        }
+      }
       
       // Generate login credentials
       const username = generateUsername(memberData);
@@ -467,11 +646,14 @@ export const updateRegistrationStatus = async (req, res) => {
       const rejectedData = registration.toObject();
       rejectedData.adminNotes = adminNotes || '';
       rejectedData.rejectedAt = new Date();
+      rejectedData.status = 'rejected'; // Ensure status is set
       delete rejectedData._id; // Remove _id to let MongoDB generate a new one
       
       // Insert directly into rejectedMemb collection without validation
-      const db = registration.constructor.db;
-      await db.collection('rejectedMemb').insertOne(rejectedData);
+      const db = mongoose.connection.db;
+      const result = await db.collection('rejectedMemb').insertOne(rejectedData);
+      
+      console.log(`✅ Inserted into rejectedMemb with new _id: ${result.insertedId}`);
       
       // Delete from Heirarchy_form
       await FamilyMember.findByIdAndDelete(id);
@@ -480,7 +662,7 @@ export const updateRegistrationStatus = async (req, res) => {
       return res.status(200).json({ 
         success: true, 
         message: "Registration rejected and moved to rejectedMemb collection",
-        data: { id, status: 'rejected' }
+        data: { id: result.insertedId, status: 'rejected' }
       });
 
     } else {
@@ -613,15 +795,47 @@ export const updateMember = async (req, res) => {
       }
     }
     
+    // Convert nested objects to dot notation to avoid overwriting entire objects
+    const flattenedUpdate = {};
+    
+    Object.keys(updateData).forEach(key => {
+      if (key === 'personalDetails' && typeof updateData[key] === 'object') {
+        // Flatten personalDetails
+        Object.keys(updateData[key]).forEach(nestedKey => {
+          const value = updateData[key][nestedKey];
+          // Only include non-empty values or explicitly false/0 values
+          if (value !== '' && value !== null && value !== undefined) {
+            flattenedUpdate[`personalDetails.${nestedKey}`] = value;
+          }
+        });
+      } else if (key === 'parentsInformation' && typeof updateData[key] === 'object') {
+        // Flatten parentsInformation
+        Object.keys(updateData[key]).forEach(nestedKey => {
+          const value = updateData[key][nestedKey];
+          if (value !== '' && value !== null && value !== undefined) {
+            flattenedUpdate[`parentsInformation.${nestedKey}`] = value;
+          }
+        });
+      } else if (key === 'marriedDetails' && typeof updateData[key] === 'object') {
+        // Flatten marriedDetails
+        Object.keys(updateData[key]).forEach(nestedKey => {
+          const value = updateData[key][nestedKey];
+          if (value !== '' && value !== null && value !== undefined) {
+            flattenedUpdate[`marriedDetails.${nestedKey}`] = value;
+          }
+        });
+      } else {
+        // Root level fields
+        flattenedUpdate[key] = updateData[key];
+      }
+    });
+    
+    flattenedUpdate.updatedAt = new Date();
+    
     const db = mongoose.connection.db;
     const result = await db.collection('members').findOneAndUpdate(
       { _id: new mongoose.Types.ObjectId(id) },
-      { 
-        $set: { 
-          ...updateData,
-          updatedAt: new Date()
-        } 
-      },
+      { $set: flattenedUpdate },
       { returnDocument: 'after' }
     );
 

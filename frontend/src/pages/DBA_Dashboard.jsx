@@ -3,7 +3,7 @@ import { RefreshCw, Users, Eye, TrendingUp, Database, Shield, X, User, Heart, Us
 import { Button } from '../components/ui/button';
 import { FamilyTreeTable } from './familytreeTable';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || process.env.REACT_APP_API_URL || window.location.origin;
 
 export function Dashboard() {
   const [stats, setStats] = useState({

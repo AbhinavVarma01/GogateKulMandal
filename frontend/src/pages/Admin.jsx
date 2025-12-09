@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Check, X, User, Calendar, Mail, Phone, MapPin, FileText, Shield, Bell, Search, Clock, AlertCircle, Eye, UserCheck, UserX, RefreshCw, Edit, Trash2 } from 'lucide-react';
-import axios from 'axios';
+import api from '../utils/api';
 import LoadingSpinner from '../components/LoadingSpinner';
+import DescendantTree from '../components/member-details/DescendantTree';
 
 // Image compression utility
 const compressImage = (file, maxWidth = 800, maxHeight = 800, quality = 0.8) => {
@@ -324,6 +325,29 @@ const GogteKulAdmin = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingMemberId, setDeletingMemberId] = useState(null);
   const [viewSourceTab, setViewSourceTab] = useState(null); // Track which tab opened the view modal
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [bulkAction, setBulkAction] = useState(null); // { action: 'approve' or 'reject', count: number }
+  const [showClearRejectedConfirm, setShowClearRejectedConfirm] = useState(false);
+  
+  // News & Events states
+  const [newsItems, setNewsItems] = useState([]);
+  const [eventsItems, setEventsItems] = useState([]);
+  const [showNewsModal, setShowNewsModal] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [editingNews, setEditingNews] = useState(null);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [showDeleteNewsModal, setShowDeleteNewsModal] = useState(false);
+  const [showDeleteEventModal, setShowDeleteEventModal] = useState(false);
+  const [deletingNews, setDeletingNews] = useState(null);
+  const [deletingEvent, setDeletingEvent] = useState(null);
+  const [selectedNews, setSelectedNews] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [viewingImage, setViewingImage] = useState(null);
+  const [newsFormImages, setNewsFormImages] = useState([]);
+  const [eventFormImages, setEventFormImages] = useState([]);
+  const [imageToDelete, setImageToDelete] = useState(null);
+  const [deletingNewsId, setDeletingNewsId] = useState(null);
+  const [deletingEventId, setDeletingEventId] = useState(null);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -341,9 +365,7 @@ const GogteKulAdmin = () => {
     try {
       const token = localStorage.getItem('authToken');
       if (token) {
-        const response = await axios.get('http://localhost:4000/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get('/api/auth/me');
         console.log('Auth response:', response.data);
         if (response.data.role === 'master_admin' || response.data.isMasterAdmin) {
           setAdminManagedVansh('');
@@ -371,7 +393,9 @@ const GogteKulAdmin = () => {
       await Promise.all([
         fetchRegistrations(vansh),
         fetchRejectedMembers(vansh),
-        fetchApprovedMembers(vansh)
+        fetchApprovedMembers(vansh),
+        fetchNews(),
+        fetchEvents()
       ]);
     };
     loadData();
@@ -380,9 +404,11 @@ const GogteKulAdmin = () => {
   const fetchRegistrations = async (vansh = adminManagedVansh) => {
     try {
       setLoading(true);
-      const url = vansh ? `http://localhost:5000/api/family/registrations?vansh=${vansh}` : 'http://localhost:5000/api/family/registrations';
-      console.log('Fetching registrations from:', url);
-      const response = await axios.get(url);
+      const params = {};
+      if (vansh !== null && vansh !== undefined && vansh !== '') {
+        params.vansh = `${vansh}`.trim();
+      }
+      const response = await api.get('/api/family/registrations', { params });
       if (response.data.success) {
         console.log('Received registrations:', response.data.data.length);
         setRegistrations(response.data.data);
@@ -397,9 +423,11 @@ const GogteKulAdmin = () => {
 
   const fetchApprovedMembers = async (vansh = adminManagedVansh) => {
     try {
-      const url = vansh ? `http://localhost:5000/api/family/all?vansh=${vansh}` : 'http://localhost:5000/api/family/all';
-      console.log('Fetching approved members from:', url);
-      const response = await axios.get(url);
+      const params = {};
+      if (vansh !== null && vansh !== undefined && vansh !== '') {
+        params.vansh = `${vansh}`.trim();
+      }
+      const response = await api.get('/api/family/all', { params });
       if (response.data.success) {
         console.log('Received approved members:', response.data.data.length);
         setApprovedMembersData(response.data.data);
@@ -411,8 +439,11 @@ const GogteKulAdmin = () => {
 
   const fetchRejectedMembers = async (vansh = adminManagedVansh) => {
     try {
-      const url = vansh ? `http://localhost:5000/api/family/rejected?vansh=${vansh}` : 'http://localhost:5000/api/family/rejected';
-      const response = await axios.get(url);
+      const params = {};
+      if (vansh !== null && vansh !== undefined && vansh !== '') {
+        params.vansh = `${vansh}`.trim();
+      }
+      const response = await api.get('/api/family/rejected', { params });
       if (response.data.success) {
         setRejectedMembers(response.data.data);
       }
@@ -427,9 +458,204 @@ const GogteKulAdmin = () => {
     await Promise.all([
       fetchRegistrations(vansh),
       fetchRejectedMembers(vansh),
-      fetchApprovedMembers(vansh)
+      fetchApprovedMembers(vansh),
+      fetchNews(),
+      fetchEvents()
     ]);
     setRefreshing(false);
+  };
+
+  // Fetch News
+  const fetchNews = async (vansh = adminManagedVansh) => {
+    try {
+      const params = vansh ? { vansh, _t: Date.now() } : { _t: Date.now() };
+      const response = await api.get('/api/news', { params });
+      if (response.data.success) {
+        setNewsItems(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching news:', error);
+    }
+  };
+
+  // Fetch Events
+  const fetchEvents = async (vansh = adminManagedVansh) => {
+    try {
+      const params = vansh ? { vansh, _t: Date.now() } : { _t: Date.now() };
+      const response = await api.get('/api/events', { params });
+      if (response.data.success) {
+        setEventsItems(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching events:', error);
+    }
+  };
+
+  // News CRUD Operations
+  const handleCreateNews = async (newsData) => {
+    try {
+      setIsProcessing(true);
+      // Add vansh to news data
+      const dataWithVansh = {
+        ...newsData,
+        vansh: adminManagedVansh || undefined
+      };
+      const response = await api.post('/api/news', dataWithVansh);
+      if (response.data.success) {
+        setSuccessMessage('News created successfully! 📰');
+        setShowSuccessModal(true);
+        setShowNewsModal(false);
+        setNewsFormImages([]);
+        await fetchNews();
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          setSuccessMessage('');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error creating news:', error);
+      alert(`Failed to create news: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleUpdateNews = async (id, newsData) => {
+    try {
+      setIsProcessing(true);
+      const response = await api.put(`/api/news/${id}`, newsData);
+      if (response.data.success) {
+        setSuccessMessage('News updated successfully! ✅');
+        setShowSuccessModal(true);
+        setShowNewsModal(false);
+        setEditingNews(null);
+        await fetchNews();
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          setSuccessMessage('');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error updating news:', error);
+      alert(`Failed to update news: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteNews = async (news) => {
+    setDeletingNews(news);
+    setShowDeleteNewsModal(true);
+  };
+
+  const confirmDeleteNews = async () => {
+    if (!deletingNews) return;
+    
+    try {
+      setIsProcessing(true);
+      const response = await api.delete(`/api/news/${deletingNews._id}`);
+      if (response.data.success) {
+        setSuccessMessage('News deleted successfully! 🗑️');
+        setShowSuccessModal(true);
+        setShowDeleteNewsModal(false);
+        setDeletingNews(null);
+        setSelectedNews(null); // Close detail modal immediately
+        await fetchNews(); // Refresh news list
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          setSuccessMessage('');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Error deleting news:', error);
+      alert(`Failed to delete news: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Events CRUD Operations
+  const handleCreateEvent = async (eventData) => {
+    try {
+      setIsProcessing(true);
+      // Add vansh to event data
+      const dataWithVansh = {
+        ...eventData,
+        vansh: adminManagedVansh || undefined
+      };
+      const response = await api.post('/api/events', dataWithVansh);
+      if (response.data.success) {
+        setSuccessMessage('Event created successfully! 🎉');
+        setShowSuccessModal(true);
+        setShowEventModal(false);
+        setEventFormImages([]);
+        await fetchEvents();
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          setSuccessMessage('');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error creating event:', error);
+      alert(`Failed to create event: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleUpdateEvent = async (id, eventData) => {
+    try {
+      setIsProcessing(true);
+      const response = await api.put(`/api/events/${id}`, eventData);
+      if (response.data.success) {
+        setSuccessMessage('Event updated successfully! ✅');
+        setShowSuccessModal(true);
+        setShowEventModal(false);
+        setEditingEvent(null);
+        setEventFormImages([]);
+        await fetchEvents();
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          setSuccessMessage('');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error updating event:', error);
+      alert(`Failed to update event: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteEvent = async (event) => {
+    setDeletingEvent(event);
+    setShowDeleteEventModal(true);
+  };
+
+  const confirmDeleteEvent = async () => {
+    if (!deletingEvent) return;
+    
+    try {
+      setIsProcessing(true);
+      const response = await api.delete(`/api/events/${deletingEvent._id}`);
+      if (response.data.success) {
+        setSuccessMessage('Event deleted successfully! 🗑️');
+        setShowSuccessModal(true);
+        setShowDeleteEventModal(false);
+        setDeletingEvent(null);
+        setSelectedEvent(null); // Close detail modal immediately
+        await fetchEvents(); // Refresh events list
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          setSuccessMessage('');
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      alert(`Failed to delete event: ${error.response?.data?.message || error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Fetch full details with images when viewing a member
@@ -440,7 +666,7 @@ const GogteKulAdmin = () => {
     
     try {
       // Fetch full details including images
-      const response = await axios.get(`http://localhost:5000/api/family/registrations/${member._id}`);
+      const response = await api.get(`/api/family/registrations/${member._id}`);
       if (response.data.success) {
         setSelectedRequest(response.data.data); // Update with full data including images
       }
@@ -505,6 +731,14 @@ const GogteKulAdmin = () => {
   const pendingRegistrations = useMemo(() => filterBySearch(allPendingRegistrations), [allPendingRegistrations, searchTerm]);
   const approvedMembers = useMemo(() => filterBySearch(allApprovedMembers), [allApprovedMembers, searchTerm]);
   const filteredRejectedMembers = useMemo(() => filterBySearch(rejectedMembers), [rejectedMembers, searchTerm]);
+  const treeRootMember = useMemo(() => {
+    if (!approvedMembers || approvedMembers.length === 0) return null;
+    const noParent = approvedMembers.find((member) => !member.fatherSerNo && !member.motherSerNo);
+    if (noParent) return noParent;
+    const levelZero = approvedMembers.find((member) => member.level === 0);
+    if (levelZero) return levelZero;
+    return approvedMembers[0];
+  }, [approvedMembers]);
 
   // Pagination logic
   const getCurrentPageData = (data) => {
@@ -596,8 +830,8 @@ const GogteKulAdmin = () => {
     try {
       console.log('🔄 Sending request to update status:', { id: recordId, status });
       
-      // Call the form-gkm server (port 5000) for status updates
-      const response = await axios.patch(`http://localhost:5000/api/family/registrations/${recordId}/status`, {
+      // Call the form-gkm server (proxied /api) for status updates
+      const response = await api.patch(`/api/family/registrations/${recordId}/status`, {
         status,
         adminNotes: approvalAction.notes || ''
       });
@@ -624,6 +858,7 @@ const GogteKulAdmin = () => {
         // Auto-hide after 3 seconds
         setTimeout(() => {
           setShowSuccessModal(false);
+          setSuccessMessage('');
         }, 3000);
       } else {
         // If failed, restore the record
@@ -659,8 +894,126 @@ const GogteKulAdmin = () => {
   };
 
   const handleBulkAction = (action) => {
-    console.log(`Bulk ${action}:`, selectedMembers);
-    setSelectedMembers([]);
+    if (selectedMembers.length === 0) return;
+    
+    // Show confirmation modal
+    setBulkAction({ action, count: selectedMembers.length });
+    setShowBulkConfirm(true);
+  };
+
+  const confirmBulkAction = async () => {
+    if (!bulkAction) return;
+    
+    const { action } = bulkAction;
+    const actionText = action === 'approve' ? 'approve' : 'reject';
+    
+    // Close confirmation modal
+    setShowBulkConfirm(false);
+    setBulkAction(null);
+    
+    setIsProcessing(true);
+    
+    try {
+      const status = action === 'approve' ? 'approved' : 'rejected';
+      const results = [];
+      const errors = [];
+      
+      // Process each selected member
+      for (const memberId of selectedMembers) {
+        try {
+          const response = await api.patch(`/api/family/registrations/${memberId}/status`, {
+            status,
+            adminNotes: `Bulk ${actionText} action`
+          });
+          
+          if (response.data.success) {
+            results.push(memberId);
+          } else {
+            errors.push({ id: memberId, error: response.data.message });
+          }
+        } catch (err) {
+          console.error(`Error ${actionText}ing ${memberId}:`, err);
+          errors.push({ id: memberId, error: err.message });
+        }
+      }
+      
+      // Update the UI
+      if (results.length > 0) {
+        setRegistrations(prev => prev.filter(reg => !results.includes(reg._id)));
+        
+        if (status === 'approved') {
+          await fetchApprovedMembers(adminManagedVansh).catch(err => {
+            console.error('⚠️ Failed to fetch approved members:', err);
+          });
+        }
+        
+        const successMsg = `Successfully ${actionText}ed ${results.length} registration(s)!${errors.length > 0 ? ` ${errors.length} failed.` : ''}`;
+        setSuccessMessage(successMsg);
+        setShowSuccessModal(true);
+        
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          setSuccessMessage('');
+        }, 3000);
+      }
+      
+      if (errors.length > 0 && results.length === 0) {
+        alert(`Failed to ${actionText} all registrations. Please try again.`);
+      }
+      
+      // Clear selection
+      setSelectedMembers([]);
+      
+    } catch (err) {
+      console.error(`Error in bulk ${actionText}:`, err);
+      alert(`An error occurred during bulk ${actionText}. Please try again.`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handler to clear all rejected members
+  const handleClearRejectedList = () => {
+    if (rejectedMembers.length === 0) {
+      alert('No rejected members to clear.');
+      return;
+    }
+
+    // Show confirmation modal
+    setShowClearRejectedConfirm(true);
+  };
+
+  const confirmClearRejectedList = async () => {
+    // Close confirmation modal
+    setShowClearRejectedConfirm(false);
+
+    setIsProcessing(true);
+    try {
+      const params = {};
+      if (adminManagedVansh !== null && adminManagedVansh !== undefined && adminManagedVansh !== '') {
+        params.vansh = `${adminManagedVansh}`.trim();
+      }
+
+      const response = await api.delete('/api/family/rejected', { params });
+      
+      if (response.data.success) {
+        setRejectedMembers([]);
+        setSuccessMessage(`Successfully cleared ${response.data.deletedCount} rejected member(s)!`);
+        setShowSuccessModal(true);
+        
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          setSuccessMessage('');
+        }, 3000);
+      } else {
+        alert('Failed to clear rejected list. Please try again.');
+      }
+    } catch (err) {
+      console.error('❌ Error clearing rejected list:', err);
+      alert('An error occurred while clearing the rejected list. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // CRUD handlers for approved members with useCallback
@@ -671,7 +1024,7 @@ const GogteKulAdmin = () => {
       setShowEditModal(true);
       
       // Fetch full member details including all fields in background
-      const response = await axios.get(`http://localhost:5000/api/family/members/${member._id}`);
+      const response = await api.get(`/api/family/members/${member._id}`);
       if (response.data.success) {
         setEditingMember(response.data.data);
       }
@@ -703,8 +1056,8 @@ const GogteKulAdmin = () => {
     
     try {
       setIsProcessing(true);
-      const response = await axios.put(
-        `http://localhost:5000/api/family/members/${editingMember._id}`,
+      const response = await api.put(
+        `/api/family/members/${editingMember._id}`,
         updatedData
       );
 
@@ -717,6 +1070,7 @@ const GogteKulAdmin = () => {
         
         setTimeout(() => {
           setShowSuccessModal(false);
+          setSuccessMessage('');
         }, 3000);
       }
     } catch (error) {
@@ -739,8 +1093,8 @@ const GogteKulAdmin = () => {
       setIsProcessing(true);
       setShowDeleteConfirm(false);
       
-      const response = await axios.delete(
-        `http://localhost:5000/api/family/members/${deletingMemberId}`
+      const response = await api.delete(
+        `/api/family/members/${deletingMemberId}`
       );
 
       if (response.data.success) {
@@ -751,6 +1105,7 @@ const GogteKulAdmin = () => {
         
         setTimeout(() => {
           setShowSuccessModal(false);
+          setSuccessMessage('');
         }, 3000);
       }
     } catch (error) {
@@ -929,16 +1284,18 @@ const GogteKulAdmin = () => {
         <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-orange-200/50">
           {/* Tabs */}
           <div className="border-b border-gray-200">
-            <div className="flex space-x-0 px-6">
+            <div className="flex space-x-0 px-6 overflow-x-auto">
               {[
                 { id: 'pending', label: 'Pending Requests', count: pendingRegistrations.length },
                 { id: 'approved', label: 'Approved Members', count: approvedMembers.length },
-                { id: 'rejected', label: 'Rejected', count: filteredRejectedMembers.length }
+                { id: 'rejected', label: 'Rejected', count: filteredRejectedMembers.length },
+                { id: 'news', label: 'News', count: newsItems.length },
+                { id: 'events', label: 'Events', count: eventsItems.length }
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-6 border-b-4 font-semibold text-sm transition-all duration-300 ${
+                  className={`py-4 px-6 border-b-4 font-semibold text-sm transition-all duration-300 whitespace-nowrap ${
                     activeTab === tab.id
                       ? 'border-orange-500 text-orange-600 bg-orange-50/50'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50/50'
@@ -971,7 +1328,7 @@ const GogteKulAdmin = () => {
                 />
               </div>
               
-              {selectedMembers.length > 0 && (
+              {selectedMembers.length > 0 && activeTab === 'pending' && (
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleBulkAction('approve')}
@@ -988,6 +1345,17 @@ const GogteKulAdmin = () => {
                     Bulk Reject ({selectedMembers.length})
                   </button>
                 </div>
+              )}
+
+              {activeTab === 'rejected' && rejectedMembers.length > 0 && (
+                <button
+                  onClick={handleClearRejectedList}
+                  disabled={isProcessing}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Clear List ({rejectedMembers.length})
+                </button>
               )}
             </div>
           </div>
@@ -1357,8 +1725,577 @@ const GogteKulAdmin = () => {
             </div>
           )}
 
+          {/* News Tab */}
+          {activeTab === 'news' && (
+            <div className="p-6">
+              <div className="mb-6 flex justify-between items-center">
+                <h3 className="text-2xl font-bold text-gray-800">Manage News</h3>
+                <button
+                  onClick={() => {
+                    setEditingNews(null);
+                    setShowNewsModal(true);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
+                >
+                  + Add New News
+                </button>
+              </div>
+
+              {newsItems.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">No news items yet. Click "Add New News" to create one.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {newsItems.map((news) => (
+                    <div key={news._id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h4 className="text-xl font-bold text-gray-800 mb-2">{news.title}</h4>
+                          <p className="text-gray-600 mb-3 line-clamp-2">{news.content}</p>
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                            <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full">{news.category || 'General'}</span>
+                            <span>📅 {new Date(news.publishDate || news.createdAt).toLocaleDateString()}</span>
+                            {news.authorName && <span>✍️ By: {news.authorName}</span>}
+                            {(news.vansh || news.authorVanshNo || news.createdByVanshNo) && (
+                              <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded font-medium">
+                                Vansh {news.vansh || news.authorVanshNo || news.createdByVanshNo}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            try {
+                              setLoading(true);
+                              const response = await api.get(`/api/news/${news._id}`);
+                              if (response.data.success) {
+                                console.log('Fetched news data:', response.data.data);
+                                console.log('Images array:', response.data.data.images);
+                                setSelectedNews(response.data.data);
+                              }
+                            } catch (error) {
+                              console.error('Error fetching news details:', error);
+                              alert('Failed to load news details');
+                            } finally {
+                              setLoading(false);
+                            }
+                          }}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Events Tab */}
+          {activeTab === 'events' && (
+            <div className="p-6">
+              <div className="mb-6 flex justify-between items-center">
+                <h3 className="text-2xl font-bold text-gray-800">Manage Events</h3>
+                <button
+                  onClick={() => {
+                    setEditingEvent(null);
+                    setShowEventModal(true);
+                  }}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
+                >
+                  + Add New Event
+                </button>
+              </div>
+
+              {eventsItems.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-gray-500">No events yet. Click "Add New Event" to create one.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {eventsItems.map((event) => (
+                    <div key={event._id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h4 className="text-xl font-bold text-gray-800 mb-2">{event.title}</h4>
+                          <p className="text-gray-600 mb-3 line-clamp-2">{event.description}</p>
+                          <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+                            <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full">{event.eventType || 'Event'}</span>
+                            <span>📅 {new Date(event.date || event.startDate).toLocaleDateString()}</span>
+                            <span>⏰ {event.fromTime || event.startTime}</span>
+                            {event.venue && <span>📍 {event.venue.name || event.venue}</span>}
+                            {(event.authorName || event.createdByName) && (
+                              <span>✍️ By: {event.authorName || event.createdByName}</span>
+                            )}
+                            {(event.vansh || event.createdByVanshNo || event.authorVanshNo) && (
+                              <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded font-medium">
+                                Vansh {event.vansh || event.createdByVanshNo || event.authorVanshNo}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={async () => {
+                            try {
+                              setLoading(true);
+                              const response = await api.get(`/api/events/${event._id}`);
+                              if (response.data.success) {
+                                console.log('Fetched event data:', response.data.data);
+                                console.log('Images array:', response.data.data.images);
+                                console.log('Event image field:', response.data.data.eventImage);
+                                setSelectedEvent(response.data.data);
+                              }
+                            } catch (error) {
+                              console.error('Error fetching event details:', error);
+                              alert('Failed to load event details');
+                            } finally {
+                              setLoading(false);
+                            }
+                          }}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center gap-2"
+                        >
+                          <Eye className="w-4 h-4" />
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       </div>
+
+      {/* News Modal */}
+      {showNewsModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {editingNews ? 'Edit News' : 'Create New News'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowNewsModal(false);
+                    setEditingNews(null);
+                    setNewsFormImages([]);
+                  }}
+                  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const newsData = {
+                  title: formData.get('title'),
+                  content: formData.get('content'),
+                  summary: formData.get('summary'),
+                  category: formData.get('category'),
+                  priority: formData.get('priority'),
+                  tags: formData.get('tags') ? formData.get('tags').split(',').map(t => t.trim()) : [],
+                  images: newsFormImages,
+                  visibleToAllVansh: formData.get('visibleToAllVansh') === 'on'
+                };
+                
+                if (editingNews) {
+                  handleUpdateNews(editingNews._id, newsData);
+                } else {
+                  handleCreateNews(newsData);
+                }
+              }}
+              className="p-6"
+            >
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                  <input
+                    type="text"
+                    name="title"
+                    defaultValue={editingNews?.title || ''}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Content *</label>
+                  <textarea
+                    name="content"
+                    defaultValue={editingNews?.content || ''}
+                    required
+                    rows={6}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Summary</label>
+                  <textarea
+                    name="summary"
+                    defaultValue={editingNews?.summary || ''}
+                    rows={2}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select
+                      name="category"
+                      defaultValue={editingNews?.category || 'General'}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="General">General</option>
+                      <option value="Announcement">Announcement</option>
+                      <option value="Achievement">Achievement</option>
+                      <option value="Milestone">Milestone</option>
+                      <option value="Memorial">Memorial</option>
+                      <option value="Celebration">Celebration</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <select
+                      name="priority"
+                      defaultValue={editingNews?.priority || 'Medium'}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                      <option value="Urgent">Urgent</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg">
+                  <input
+                    type="checkbox"
+                    name="visibleToAllVansh"
+                    id="eventVisibleToAllVansh"
+                    defaultChecked={editingEvent?.visibleToAllVansh !== false}
+                    className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                  />
+                  <label htmlFor="eventVisibleToAllVansh" className="text-sm font-medium text-gray-700 cursor-pointer">
+                    📢 Publish to all vanshes (visible to everyone)
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
+                  <div className="space-y-3">
+                    <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors text-sm font-medium inline-block">
+                      + Add Images
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={async (e) => {
+                          const files = Array.from(e.target.files);
+                          if (files.length === 0) return;
+                          
+                          try {
+                            const newImages = [];
+                            for (const file of files) {
+                              const compressed = await compressImage(file);
+                              const reader = new FileReader();
+                              const base64 = await new Promise((resolve) => {
+                                reader.onloadend = () => resolve(reader.result);
+                                reader.readAsDataURL(compressed);
+                              });
+                              newImages.push(base64);
+                            }
+                            setNewsFormImages([...newsFormImages, ...newImages]);
+                          } catch (error) {
+                            console.error('Error processing images:', error);
+                            alert('Failed to process images');
+                          }
+                        }}
+                      />
+                    </label>
+                    {newsFormImages.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2">
+                        {newsFormImages.map((img, idx) => (
+                          <div key={idx} className="relative group">
+                            <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-20 object-cover rounded-lg" />
+                            <button
+                              type="button"
+                              onClick={() => setNewsFormImages(newsFormImages.filter((_, i) => i !== idx))}
+                              className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+                  <input
+                    type="text"
+                    name="tags"
+                    defaultValue={editingNews?.tags?.join(', ') || ''}
+                    placeholder="e.g., family, tradition, celebration"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-6 flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNewsModal(false);
+                    setEditingNews(null);
+                    setNewsFormImages([]);
+                  }}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {isProcessing ? 'Saving...' : editingNews ? 'Update News' : 'Create News'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Event Modal */}
+      {showEventModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-pink-50">
+              <div className="flex items-center justify-between">
+                <h3 className="text-2xl font-bold text-gray-800">
+                  {editingEvent ? 'Edit Event' : 'Create New Event'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowEventModal(false);
+                    setEditingEvent(null);
+                    setEventFormImages([]);
+                  }}
+                  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
+            </div>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const eventData = {
+                  title: formData.get('title'),
+                  description: formData.get('description'),
+                  eventType: formData.get('eventType'),
+                  date: formData.get('date'),
+                  fromTime: formData.get('fromTime'),
+                  toTime: formData.get('toTime'),
+                  venue: formData.get('venue'),
+                  eventImage: eventFormImages,
+                  visibleToAllVansh: formData.get('visibleToAllVansh') === 'on'
+                };
+                
+                if (editingEvent) {
+                  handleUpdateEvent(editingEvent._id, eventData);
+                } else {
+                  handleCreateEvent(eventData);
+                }
+              }}
+              className="p-6"
+            >
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                  <input
+                    type="text"
+                    name="title"
+                    defaultValue={editingEvent?.title || ''}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                  <textarea
+                    name="description"
+                    defaultValue={editingEvent?.description || ''}
+                    required
+                    rows={4}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Event Type *</label>
+                    <select
+                      name="eventType"
+                      defaultValue={editingEvent?.eventType || 'Cultural'}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    >
+                      <option value="Birthday">Birthday</option>
+                      <option value="Anniversary">Anniversary</option>
+                      <option value="Wedding">Wedding</option>
+                      <option value="Festival">Festival</option>
+                      <option value="Reunion">Reunion</option>
+                      <option value="Memorial">Memorial</option>
+                      <option value="Cultural">Cultural</option>
+                      <option value="Religious">Religious</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                    <input
+                      type="date"
+                      name="date"
+                      defaultValue={editingEvent?.date ? new Date(editingEvent.date).toISOString().split('T')[0] : ''}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
+                    <input
+                      type="time"
+                      name="fromTime"
+                      defaultValue={editingEvent?.fromTime || ''}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">End Time *</label>
+                    <input
+                      type="time"
+                      name="toTime"
+                      defaultValue={editingEvent?.toTime || ''}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Images</label>
+                  <div className="space-y-3">
+                    <label className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer transition-colors text-sm font-medium inline-block">
+                      + Add Images
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={async (e) => {
+                          const files = Array.from(e.target.files);
+                          if (files.length === 0) return;
+                          
+                          try {
+                            const newImages = [];
+                            for (const file of files) {
+                              const compressed = await compressImage(file);
+                              const reader = new FileReader();
+                              const base64 = await new Promise((resolve) => {
+                                reader.onloadend = () => resolve(reader.result);
+                                reader.readAsDataURL(compressed);
+                              });
+                              newImages.push(base64);
+                            }
+                            setEventFormImages([...eventFormImages, ...newImages]);
+                          } catch (error) {
+                            console.error('Error processing images:', error);
+                            alert('Failed to process images');
+                          }
+                        }}
+                      />
+                    </label>
+                    {eventFormImages.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2">
+                        {eventFormImages.map((img, idx) => (
+                          <div key={idx} className="relative group">
+                            <img src={img} alt={`Preview ${idx + 1}`} className="w-full h-20 object-cover rounded-lg" />
+                            <button
+                              type="button"
+                              onClick={() => setEventFormImages(eventFormImages.filter((_, i) => i !== idx))}
+                              className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Venue *</label>
+                  <input
+                    type="text"
+                    name="venue"
+                    defaultValue={editingEvent?.venue?.name || editingEvent?.venue || ''}
+                    required
+                    placeholder="Event location"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-6 flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEventModal(false);
+                    setEditingEvent(null);
+                    setEventFormImages([]);
+                  }}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                >
+                  {isProcessing ? 'Saving...' : editingEvent ? 'Update Event' : 'Create Event'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Detail Modal - User Registration Details */}
       {selectedRequest && (
@@ -1538,6 +2475,94 @@ const GogteKulAdmin = () => {
       )}
 
       {/* First Confirmation for Rejection */}
+      {showBulkConfirm && bulkAction && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                  bulkAction.action === 'approve' ? 'bg-green-100' : 'bg-orange-100'
+                }`}>
+                  <AlertCircle className={`w-8 h-8 ${
+                    bulkAction.action === 'approve' ? 'text-green-600' : 'text-orange-600'
+                  }`} />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">
+                  {bulkAction.action === 'approve' 
+                    ? `Bulk Approve ${bulkAction.count} Registration(s)?`
+                    : `Bulk Reject ${bulkAction.count} Registration(s)?`
+                  }
+                </h3>
+                <p className="text-gray-600">
+                  {bulkAction.action === 'approve'
+                    ? `This will approve ${bulkAction.count} registration(s) and move them to the members collection. Email notifications will be sent.`
+                    : `This will reject ${bulkAction.count} registration(s) and move them to the rejected list.`
+                  }
+                </p>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowBulkConfirm(false);
+                    setBulkAction(null);
+                  }}
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 font-semibold transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmBulkAction}
+                  className={`flex-1 px-4 py-3 text-white rounded-xl font-semibold transition-all ${
+                    bulkAction.action === 'approve'
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-orange-600 hover:bg-orange-700'
+                  }`}
+                >
+                  Yes, Continue
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear Rejected List Confirmation Modal */}
+      {showClearRejectedConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center bg-purple-100">
+                  <AlertCircle className="w-8 h-8 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-2">
+                  Clear All Rejected Members?
+                </h3>
+                <p className="text-gray-600">
+                  Are you sure you want to clear all <strong>{rejectedMembers.length}</strong> rejected member(s)? This action cannot be undone.
+                </p>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowClearRejectedConfirm(false)}
+                  className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 font-semibold transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmClearRejectedList}
+                  className="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-semibold transition-all"
+                >
+                  Yes, Clear List
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showConfirmReject && pendingRejection && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
@@ -1639,7 +2664,7 @@ const GogteKulAdmin = () => {
 
       {/* Success Modal */}
       {showSuccessModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
             <div className="p-8 text-center">
               <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center bg-green-100">
@@ -1649,12 +2674,21 @@ const GogteKulAdmin = () => {
                 {successMessage}
               </h3>
               <p className="text-gray-600 mb-6">
-                {successMessage.includes('Approved') 
+                {successMessage.includes('updated') 
+                  ? 'The member information has been updated successfully.' 
+                  : successMessage.includes('deleted') 
+                  ? 'The member has been removed from the system.'
+                  : successMessage.includes('cleared')
+                  ? 'All rejected members have been cleared from the list.'
+                  : successMessage.includes('Approved') 
                   ? 'The registration has been approved and moved to members collection.' 
-                  : 'The registration has been deleted and moved to rejected members collection.'}
+                  : 'The operation completed successfully.'}
               </p>
               <button
-                onClick={() => setShowSuccessModal(false)}
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  setSuccessMessage('');
+                }}
                 className="px-6 py-3 rounded-xl text-white font-semibold transition-all bg-green-600 hover:bg-green-700"
               >
                 Close
@@ -1740,51 +2774,141 @@ const GogteKulAdmin = () => {
               )}
               <form 
                 key={`${editingMember._id}-${editingMember._loading ? 'loading' : 'loaded'}`}
-                onSubmit={(e) => {
+                onSubmit={async (e) => {
                   e.preventDefault();
                   const formData = new FormData(e.target);
-                  const updatedData = {};
+                  const updatedData = {
+                    personalDetails: {},
+                    parentsInformation: {},
+                    marriedDetails: {}
+                  };
+                
+                  // Process file uploads separately
+                  const profileImageFile = formData.get('pd_profileImage');
+                  const fatherImageFile = formData.get('pi_fatherProfileImage');
+                  const motherImageFile = formData.get('pi_motherProfileImage');
+                  const spouseImageFile = formData.get('md_spouseProfileImage');
                   
-                  // Initialize nested objects
-                  const personalDetails = { ...editingMember.personalDetails };
-                  const parentsInformation = { ...editingMember.parentsInformation };
-                  const marriedDetails = { ...editingMember.marriedDetails };
-                
-                formData.forEach((value, key) => {
-                  if (key.startsWith('pd_')) {
-                    personalDetails[key.replace('pd_', '')] = value;
-                  } else if (key.startsWith('pi_')) {
-                    parentsInformation[key.replace('pi_', '')] = value;
-                  } else if (key.startsWith('md_')) {
-                    marriedDetails[key.replace('md_', '')] = value;
-                  } else {
-                    updatedData[key] = value;
+                  // Compress and convert images to base64 if new files are uploaded
+                  if (profileImageFile && profileImageFile.size > 0) {
+                    try {
+                      const compressed = await compressImage(profileImageFile);
+                      const reader = new FileReader();
+                      const base64 = await new Promise((resolve) => {
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(compressed);
+                      });
+                      updatedData.personalDetails.profileImage = base64;
+                    } catch (error) {
+                      console.error('Error compressing profile image:', error);
+                    }
                   }
-                });
-                
-                updatedData.personalDetails = personalDetails;
-                updatedData.parentsInformation = parentsInformation;
-                updatedData.marriedDetails = marriedDetails;
-                
-                // Convert numeric fields
-                if (updatedData.serNo) updatedData.serNo = parseInt(updatedData.serNo);
-                if (updatedData.fatherSerNo) updatedData.fatherSerNo = parseInt(updatedData.fatherSerNo);
-                if (updatedData.motherSerNo) updatedData.motherSerNo = parseInt(updatedData.motherSerNo);
-                if (updatedData.spouseSerNo) updatedData.spouseSerNo = parseInt(updatedData.spouseSerNo);
-                if (updatedData.level) updatedData.level = parseInt(updatedData.level);
-                
-                // Handle childrenSerNos - convert comma-separated string to array of numbers
-                if (updatedData.childrenSerNos) {
-                  const childrenStr = updatedData.childrenSerNos.trim();
-                  if (childrenStr) {
-                    updatedData.childrenSerNos = childrenStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
-                  } else {
-                    updatedData.childrenSerNos = [];
+                  
+                  if (fatherImageFile && fatherImageFile.size > 0) {
+                    try {
+                      const compressed = await compressImage(fatherImageFile);
+                      const reader = new FileReader();
+                      const base64 = await new Promise((resolve) => {
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(compressed);
+                      });
+                      updatedData.parentsInformation.fatherProfileImage = base64;
+                    } catch (error) {
+                      console.error('Error compressing father image:', error);
+                    }
                   }
-                }
+                  
+                  if (motherImageFile && motherImageFile.size > 0) {
+                    try {
+                      const compressed = await compressImage(motherImageFile);
+                      const reader = new FileReader();
+                      const base64 = await new Promise((resolve) => {
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(compressed);
+                      });
+                      updatedData.parentsInformation.motherProfileImage = base64;
+                    } catch (error) {
+                      console.error('Error compressing mother image:', error);
+                    }
+                  }
+                  
+                  if (spouseImageFile && spouseImageFile.size > 0) {
+                    try {
+                      const compressed = await compressImage(spouseImageFile);
+                      const reader = new FileReader();
+                      const base64 = await new Promise((resolve) => {
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(compressed);
+                      });
+                      updatedData.marriedDetails.spouseProfileImage = base64;
+                    } catch (error) {
+                      console.error('Error compressing spouse image:', error);
+                    }
+                  }
                 
-                handleUpdateMember(updatedData);
-              }}>
+                  formData.forEach((value, key) => {
+                    // Skip file inputs as they're handled separately above
+                    if (key.includes('ProfileImage') || key.includes('profileImage')) {
+                      return;
+                    }
+                    
+                    // Only include fields with actual values (skip empty strings)
+                    if (value !== '' && value !== null && value !== undefined) {
+                      if (key.startsWith('pd_')) {
+                        updatedData.personalDetails[key.replace('pd_', '')] = value;
+                      } else if (key.startsWith('pi_')) {
+                        updatedData.parentsInformation[key.replace('pi_', '')] = value;
+                      } else if (key.startsWith('md_')) {
+                        updatedData.marriedDetails[key.replace('md_', '')] = value;
+                      } else {
+                        updatedData[key] = value;
+                      }
+                    } else if (key === 'adminNotes') {
+                      // Allow adminNotes to be explicitly emptied
+                      updatedData[key] = value;
+                    }
+                  });
+                
+                  // Remove empty nested objects
+                  if (Object.keys(updatedData.personalDetails).length === 0) {
+                    delete updatedData.personalDetails;
+                  }
+                  if (Object.keys(updatedData.parentsInformation).length === 0) {
+                    delete updatedData.parentsInformation;
+                  }
+                  if (Object.keys(updatedData.marriedDetails).length === 0) {
+                    delete updatedData.marriedDetails;
+                  }
+                
+                  // Convert numeric fields
+                  if (updatedData.serNo) updatedData.serNo = parseInt(updatedData.serNo);
+                  if (updatedData.fatherSerNo) {
+                    updatedData.fatherSerNo = parseInt(updatedData.fatherSerNo);
+                    // Sync to parentsInformation as well
+                    if (!updatedData.parentsInformation) updatedData.parentsInformation = {};
+                    updatedData.parentsInformation.fatherSerNo = updatedData.fatherSerNo;
+                  }
+                  if (updatedData.motherSerNo) {
+                    updatedData.motherSerNo = parseInt(updatedData.motherSerNo);
+                    // Sync to parentsInformation as well
+                    if (!updatedData.parentsInformation) updatedData.parentsInformation = {};
+                    updatedData.parentsInformation.motherSerNo = updatedData.motherSerNo;
+                  }
+                  if (updatedData.spouseSerNo) updatedData.spouseSerNo = parseInt(updatedData.spouseSerNo);
+                  if (updatedData.level) updatedData.level = parseInt(updatedData.level);
+                
+                  // Handle childrenSerNos - convert comma-separated string to array of numbers
+                  if (updatedData.childrenSerNos) {
+                    const childrenStr = updatedData.childrenSerNos.trim();
+                    if (childrenStr) {
+                      updatedData.childrenSerNos = childrenStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+                    } else {
+                      updatedData.childrenSerNos = [];
+                    }
+                  }
+                
+                  handleUpdateMember(updatedData);
+                }}>
                 
                 {/* Basic Information */}
                 <div className="mb-8">
@@ -2051,7 +3175,7 @@ const GogteKulAdmin = () => {
                       <input
                         type="number"
                         name="fatherSerNo"
-                        defaultValue={editingMember.fatherSerNo || ''}
+                        defaultValue={editingMember.fatherSerNo || editingMember.parentsInformation?.fatherSerNo || ''}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       />
                     </div>
@@ -2155,7 +3279,7 @@ const GogteKulAdmin = () => {
                       <input
                         type="number"
                         name="motherSerNo"
-                        defaultValue={editingMember.motherSerNo || ''}
+                        defaultValue={editingMember.motherSerNo || editingMember.parentsInformation?.motherSerNo || ''}
                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       />
                     </div>
@@ -2472,6 +3596,897 @@ const GogteKulAdmin = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* News Detail Modal with Full CRUD */}
+      {selectedNews && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 p-8 border-b border-blue-200 bg-gradient-to-r from-blue-100 to-indigo-100 z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">{selectedNews.title}</h2>
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <span className="bg-blue-200 text-blue-800 px-3 py-1 rounded-full font-medium">
+                      {selectedNews.category || 'General'}
+                    </span>
+                    <span>📅 {new Date(selectedNews.publishDate || selectedNews.createdAt).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedNews(null)}
+                  className="p-3 hover:bg-white/50 rounded-xl transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-8 space-y-6">
+              {/* Details Section */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(selectedNews.authorName || selectedNews.createdByName) && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Published By</p>
+                        <p className="font-semibold text-gray-800">{selectedNews.authorName || selectedNews.createdByName}</p>
+                      </div>
+                    </div>
+                  )}
+                  {(selectedNews.vansh || selectedNews.authorVanshNo || selectedNews.createdByVanshNo) && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Vansh Number</p>
+                        <p className="font-semibold text-orange-700">Vansh {selectedNews.vansh || selectedNews.authorVanshNo || selectedNews.createdByVanshNo}</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Published Date</p>
+                      <p className="font-semibold text-gray-800">
+                        {new Date(selectedNews.publishDate || selectedNews.createdAt).toLocaleDateString('en-IN', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Category</p>
+                      <p className="font-semibold text-gray-800">{selectedNews.category || 'General'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Content Section */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-600" />
+                  Content
+                </h3>
+                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedNews.content}</p>
+                {selectedNews.summary && (
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-500">
+                    <p className="text-sm font-medium text-blue-900">Summary:</p>
+                    <p className="text-blue-800">{selectedNews.summary}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Images Section */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Images ({selectedNews.images?.length || 0})
+                  </h3>
+                  <label className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition-colors text-sm font-medium">
+                    + Add Image
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={async (e) => {
+                        const files = Array.from(e.target.files);
+                        if (files.length === 0) return;
+                        
+                        try {
+                          setIsProcessing(true);
+                          const newImages = [];
+                          
+                          for (const file of files) {
+                            const compressed = await compressImage(file);
+                            const reader = new FileReader();
+                            const base64 = await new Promise((resolve) => {
+                              reader.onloadend = () => resolve(reader.result);
+                              reader.readAsDataURL(compressed);
+                            });
+                            newImages.push(base64);
+                          }
+                          
+                          const updatedImages = [...(selectedNews.images || []), ...newImages];
+                          const response = await api.put(`/api/news/${selectedNews._id}`, {
+                            images: updatedImages
+                          });
+                          
+                          if (response.data.success) {
+                            setSuccessMessage('Images added successfully! 📷');
+                            setShowSuccessModal(true);
+                            
+                            const refreshResponse = await api.get(`/api/news/${selectedNews._id}`);
+                            if (refreshResponse.data.success) {
+                              setSelectedNews(refreshResponse.data.data);
+                            }
+                            
+                            setTimeout(() => {
+                              setShowSuccessModal(false);
+                              setSuccessMessage('');
+                            }, 3000);
+                          }
+                        } catch (error) {
+                          console.error('Error uploading images:', error);
+                          alert('Failed to upload images');
+                        } finally {
+                          setIsProcessing(false);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                {selectedNews.images && selectedNews.images.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-4">
+                    {selectedNews.images.map((img, idx) => {
+                      // Handle different image formats: string URL, object with url property, or base64
+                      const imageUrl = typeof img === 'string' ? img : (img.url || img.imageUrl || img.image || '');
+                      
+                      return (
+                        <div key={idx} className="relative group">
+                          <img
+                            src={imageUrl}
+                            alt={`News image ${idx + 1}`}
+                            className="w-full h-48 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => setViewingImage({ url: imageUrl, source: img, type: 'news', index: idx })}
+                            onError={(e) => {
+                              console.log('Image load error:', img);
+                              e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg pointer-events-none" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No images uploaded yet</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Meta Information */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Priority</p>
+                    <p className="font-semibold text-gray-800">{selectedNews.priority || 'Medium'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Status</p>
+                    <p className="font-semibold text-gray-800">{selectedNews.isPublished ? 'Published' : 'Draft'}</p>
+                  </div>
+                  {selectedNews.tags && selectedNews.tags.length > 0 && (
+                    <div className="col-span-2">
+                      <p className="text-sm text-gray-600 mb-2">Tags</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedNews.tags.map((tag, idx) => (
+                          <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setDeletingNews(selectedNews);
+                    setShowDeleteNewsModal(true);
+                  }}
+                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center gap-2"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  Delete News
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingNews(selectedNews);
+                    setShowNewsModal(true);
+                    setSelectedNews(null);
+                  }}
+                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+                >
+                  <Edit className="w-5 h-5" />
+                  Edit News
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Event Detail Modal with Full CRUD */}
+      {selectedEvent && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 p-8 border-b border-purple-200 bg-gradient-to-r from-purple-100 to-pink-100 z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-bold text-gray-800 mb-2">{selectedEvent.title}</h2>
+                  <div className="flex items-center gap-3 text-sm text-gray-600">
+                    <span className="bg-purple-200 text-purple-800 px-3 py-1 rounded-full font-medium">
+                      {selectedEvent.eventType || 'Event'}
+                    </span>
+                    <span>📅 {new Date(selectedEvent.date || selectedEvent.startDate).toLocaleDateString()}</span>
+                    <span>⏰ {selectedEvent.fromTime || selectedEvent.startTime}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedEvent(null)}
+                  className="p-3 hover:bg-white/50 rounded-xl transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-8 space-y-6">
+              {/* Details Section */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Details
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {(selectedEvent.createdByName || selectedEvent.authorName) && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Created By</p>
+                        <p className="font-semibold text-gray-800">{selectedEvent.createdByName || selectedEvent.authorName}</p>
+                      </div>
+                    </div>
+                  )}
+                  {(selectedEvent.vansh || selectedEvent.authorVanshNo || selectedEvent.createdByVanshNo) && (
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Vansh Number</p>
+                        <p className="font-semibold text-orange-700">Vansh {selectedEvent.vansh || selectedEvent.authorVanshNo || selectedEvent.createdByVanshNo}</p>
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Created Date</p>
+                      <p className="font-semibold text-gray-800">
+                        {new Date(selectedEvent.createdAt).toLocaleDateString('en-IN', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg className="w-5 h-5 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600">Event Type</p>
+                      <p className="font-semibold text-gray-800">{selectedEvent.eventType || 'Event'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description Section */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-purple-600" />
+                  Description
+                </h3>
+                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{selectedEvent.description}</p>
+              </div>
+
+              {/* Event Details */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Event Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-purple-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">Date</p>
+                      <p className="font-semibold text-gray-800">
+                        {new Date(selectedEvent.date || selectedEvent.startDate).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-purple-600" />
+                    <div>
+                      <p className="text-sm text-gray-600">Time</p>
+                      <p className="font-semibold text-gray-800">
+                        {selectedEvent.fromTime || selectedEvent.startTime} - {selectedEvent.toTime || selectedEvent.endTime}
+                      </p>
+                    </div>
+                  </div>
+                  {selectedEvent.venue && (
+                    <div className="col-span-2 flex items-center gap-3">
+                      <MapPin className="w-5 h-5 text-purple-600" />
+                      <div>
+                        <p className="text-sm text-gray-600">Venue</p>
+                        <p className="font-semibold text-gray-800">
+                          {selectedEvent.venue.name || selectedEvent.venue}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Images Section */}
+              <div className="bg-white rounded-2xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    Images ({(() => {
+                      // Count images from both eventImage and images
+                      let count = 0;
+                      if (selectedEvent.eventImage) {
+                        count += Array.isArray(selectedEvent.eventImage) ? selectedEvent.eventImage.length : 1;
+                      }
+                      if (selectedEvent.images) {
+                        count += Array.isArray(selectedEvent.images) ? selectedEvent.images.length : 1;
+                      }
+                      return count;
+                    })()})
+                  </h3>
+                  <label className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 cursor-pointer transition-colors text-sm font-medium">
+                    + Add Image
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={async (e) => {
+                        const files = Array.from(e.target.files);
+                        if (files.length === 0) return;
+                        
+                        try {
+                          setIsProcessing(true);
+                          const newImages = [];
+                          
+                          for (const file of files) {
+                            const compressed = await compressImage(file);
+                            const reader = new FileReader();
+                            const base64 = await new Promise((resolve) => {
+                              reader.onloadend = () => resolve(reader.result);
+                              reader.readAsDataURL(compressed);
+                            });
+                            newImages.push(base64);
+                          }
+                          
+                          // Add to eventImage array (main storage for event images)
+                          const currentImages = Array.isArray(selectedEvent.eventImage) 
+                            ? selectedEvent.eventImage 
+                            : (selectedEvent.eventImage ? [selectedEvent.eventImage] : []);
+                          const updatedImages = [...currentImages, ...newImages];
+                          
+                          const response = await api.put(`/api/events/${selectedEvent._id}`, {
+                            eventImage: updatedImages
+                          });
+                          
+                          if (response.data.success) {
+                            setSuccessMessage('Images added successfully! 📷');
+                            setShowSuccessModal(true);
+                            
+                            const refreshResponse = await api.get(`/api/events/${selectedEvent._id}`);
+                            if (refreshResponse.data.success) {
+                              setSelectedEvent(refreshResponse.data.data);
+                            }
+                            
+                            setTimeout(() => {
+                              setShowSuccessModal(false);
+                              setSuccessMessage('');
+                            }, 3000);
+                          }
+                        } catch (error) {
+                          console.error('Error uploading images:', error);
+                          alert('Failed to upload images');
+                        } finally {
+                          setIsProcessing(false);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                {(() => {
+                  // Combine all images from eventImage and images fields
+                  const allImages = [];
+                  
+                  // Handle eventImage - can be array or single value
+                  if (selectedEvent.eventImage) {
+                    if (Array.isArray(selectedEvent.eventImage)) {
+                      selectedEvent.eventImage.forEach(img => allImages.push({ source: img, type: 'eventImage' }));
+                    } else {
+                      allImages.push({ source: selectedEvent.eventImage, type: 'eventImage' });
+                    }
+                  }
+                  
+                  // Handle images array
+                  if (selectedEvent.images) {
+                    if (Array.isArray(selectedEvent.images)) {
+                      selectedEvent.images.forEach(img => allImages.push({ source: img, type: 'images' }));
+                    } else {
+                      allImages.push({ source: selectedEvent.images, type: 'images' });
+                    }
+                  }
+                  
+                  return allImages.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-4">
+                      {allImages.map((imgObj, idx) => {
+                        const img = imgObj.source;
+                        // Handle different image formats: string (base64 or URL), or object
+                        const imageUrl = typeof img === 'string' ? img : (img.url || img.imageUrl || img.image || '');
+                        
+                        return (
+                          <div key={idx} className="relative group">
+                            <img
+                              src={imageUrl}
+                              alt={`Event image ${idx + 1}`}
+                              className="w-full h-48 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => setViewingImage({ url: imageUrl, source: img, type: 'event', index: idx, fieldType: imgObj.type })}
+                              onError={(e) => {
+                                console.log('Image load error for', imgObj.type, ':', img);
+                                e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200"%3E%3Crect fill="%23ddd" width="200" height="200"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded-lg pointer-events-none" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No images uploaded yet</p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => {
+                    setDeletingEvent(selectedEvent);
+                    setShowDeleteEventModal(true);
+                  }}
+                  className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium flex items-center gap-2"
+                >
+                  <Trash2 className="w-5 h-5" />
+                  Delete Event
+                </button>
+                <button
+                  onClick={() => {
+                    setEditingEvent(selectedEvent);
+                    setShowEventModal(true);
+                    setSelectedEvent(null);
+                  }}
+                  className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium flex items-center gap-2"
+                >
+                  <Edit className="w-5 h-5" />
+                  Edit Event
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Viewer Modal */}
+      {viewingImage && (
+        <div className="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="relative max-w-7xl w-full max-h-[90vh] flex items-center justify-center">
+            {/* Close button */}
+            <button
+              onClick={() => setViewingImage(null)}
+              className="absolute top-4 right-4 p-3 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+
+            {/* Image */}
+            <img
+              src={viewingImage.url}
+              alt="Full size"
+              className="max-w-full max-h-[85vh] object-contain rounded-lg"
+            />
+
+            {/* Delete button */}
+            <button
+              onClick={() => {
+                setImageToDelete(viewingImage);
+                setViewingImage(null);
+              }}
+              className="absolute bottom-4 right-4 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+            >
+              <Trash2 className="w-5 h-5" />
+              Delete Image
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Image Confirmation Modal */}
+      {imageToDelete && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl">
+            <div className="p-6 border-b border-gray-200 bg-red-50">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-800">Delete Image?</h3>
+                  <p className="text-gray-600">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-red-500">
+                <img
+                  src={imageToDelete.url}
+                  alt="Image to delete"
+                  className="w-full max-h-64 object-contain rounded-lg mb-3"
+                />
+                <p className="text-sm text-gray-600">
+                  Image {imageToDelete.index + 1} from {imageToDelete.type === 'news' ? 'News' : 'Event'}
+                </p>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-amber-800 text-sm">
+                  ⚠️ <strong>Warning:</strong> This image will be permanently removed from the {imageToDelete.type === 'news' ? 'news' : 'event'}.
+                </p>
+              </div>
+            </div>
+            
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex gap-3 justify-end">
+              <button
+                onClick={() => setImageToDelete(null)}
+                disabled={isProcessing}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    setIsProcessing(true);
+                    
+                    if (imageToDelete.type === 'news') {
+                      // Delete from News
+                      const updatedImages = [...(selectedNews.images || [])];
+                      updatedImages.splice(imageToDelete.index, 1);
+                      
+                      const response = await api.put(`/api/news/${selectedNews._id}`, {
+                        images: updatedImages
+                      });
+                      
+                      if (response.data.success) {
+                        setSuccessMessage('Image deleted successfully! 🗑️');
+                        setShowSuccessModal(true);
+                        setImageToDelete(null);
+                        
+                        // Refresh the news detail
+                        const refreshResponse = await api.get(`/api/news/${selectedNews._id}`);
+                        if (refreshResponse.data.success) {
+                          setSelectedNews(refreshResponse.data.data);
+                        }
+                        
+                        setTimeout(() => {
+                          setShowSuccessModal(false);
+                          setSuccessMessage('');
+                        }, 3000);
+                      }
+                    } else if (imageToDelete.type === 'event') {
+                      // Delete from Event - handle both eventImage array and images array
+                      let updateData = {};
+                      
+                      if (imageToDelete.fieldType === 'eventImage') {
+                        const updatedEventImages = Array.isArray(selectedEvent.eventImage) 
+                          ? [...selectedEvent.eventImage] 
+                          : [selectedEvent.eventImage];
+                        updatedEventImages.splice(imageToDelete.index, 1);
+                        updateData.eventImage = updatedEventImages;
+                      } else {
+                        const updatedImages = [...(selectedEvent.images || [])];
+                        updatedImages.splice(imageToDelete.index, 1);
+                        updateData.images = updatedImages;
+                      }
+                      
+                      const response = await api.put(`/api/events/${selectedEvent._id}`, updateData);
+                      
+                      if (response.data.success) {
+                        setSuccessMessage('Image deleted successfully! 🗑️');
+                        setShowSuccessModal(true);
+                        setImageToDelete(null);
+                        
+                        // Refresh the event detail
+                        const refreshResponse = await api.get(`/api/events/${selectedEvent._id}`);
+                        if (refreshResponse.data.success) {
+                          setSelectedEvent(refreshResponse.data.data);
+                        }
+                        
+                        setTimeout(() => {
+                          setShowSuccessModal(false);
+                          setSuccessMessage('');
+                        }, 3000);
+                      }
+                    }
+                  } catch (error) {
+                    console.error('Error deleting image:', error);
+                    alert(`Failed to delete image: ${error.response?.data?.message || error.message}`);
+                  } finally {
+                    setIsProcessing(false);
+                  }
+                }}
+                disabled={isProcessing}
+                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors font-medium flex items-center gap-2"
+              >
+                {isProcessing ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-5 h-5" />
+                    Delete Image
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete News Confirmation Modal */}
+      {showDeleteNewsModal && deletingNews && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl">
+            <div className="p-6 border-b border-gray-200 bg-red-50">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-800">Delete News?</h3>
+                  <p className="text-gray-600">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-red-500">
+                <h4 className="font-bold text-lg text-gray-800 mb-2">{deletingNews.title}</h4>
+                <p className="text-gray-600 mb-3">{deletingNews.content}</p>
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+                    {deletingNews.category || 'General'}
+                  </span>
+                  <span>📅 {new Date(deletingNews.publishDate || deletingNews.createdAt).toLocaleDateString()}</span>
+                </div>
+                {deletingNews.tags && deletingNews.tags.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {deletingNews.tags.map((tag, idx) => (
+                      <span key={idx} className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-amber-800 text-sm">
+                  ⚠️ <strong>Warning:</strong> Deleting this news will permanently remove it from the database. 
+                  All associated data including images and comments will be lost.
+                </p>
+              </div>
+            </div>
+            
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowDeleteNewsModal(false);
+                  setDeletingNews(null);
+                }}
+                disabled={isProcessing}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteNews}
+                disabled={isProcessing}
+                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors font-medium flex items-center gap-2"
+              >
+                {isProcessing ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-5 h-5" />
+                    Delete News
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Event Confirmation Modal */}
+      {showDeleteEventModal && deletingEvent && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl">
+            <div className="p-6 border-b border-gray-200 bg-red-50">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-800">Delete Event?</h3>
+                  <p className="text-gray-600">This action cannot be undone</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-red-500">
+                <h4 className="font-bold text-lg text-gray-800 mb-2">{deletingEvent.title}</h4>
+                <p className="text-gray-600 mb-3">{deletingEvent.description}</p>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-700">Type:</span>
+                    <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full">
+                      {deletingEvent.eventType || 'Event'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-700">Date:</span>
+                    <span className="text-gray-600">
+                      {new Date(deletingEvent.date || deletingEvent.startDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-gray-700">Time:</span>
+                    <span className="text-gray-600">
+                      {deletingEvent.fromTime || deletingEvent.startTime} - {deletingEvent.toTime || deletingEvent.endTime}
+                    </span>
+                  </div>
+                  {deletingEvent.venue && (
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-700">Venue:</span>
+                      <span className="text-gray-600">
+                        {deletingEvent.venue.name || deletingEvent.venue}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <p className="text-amber-800 text-sm">
+                  ⚠️ <strong>Warning:</strong> Deleting this event will permanently remove it from the database. 
+                  All associated data including attendees, comments, and images will be lost.
+                </p>
+              </div>
+            </div>
+            
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowDeleteEventModal(false);
+                  setDeletingEvent(null);
+                }}
+                disabled={isProcessing}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteEvent}
+                disabled={isProcessing}
+                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors font-medium flex items-center gap-2"
+              >
+                {isProcessing ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-5 h-5" />
+                    Delete Event
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>

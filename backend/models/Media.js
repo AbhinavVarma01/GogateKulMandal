@@ -42,6 +42,12 @@ mediaSchema.index({ linked_to_id: 1 });
 mediaSchema.index({ uploaded_date: -1 });
 mediaSchema.index({ 'tags': 1, 'uploaded_date': -1 });
 
-const Media = mongoose.model('Media', mediaSchema);
-export default Media;
+let Media;
+try {
+  Media = mongoose.models.Media || mongoose.model('Media', mediaSchema);
+} catch (error) {
+  console.error('Failed to initialize Media model:', error);
+  throw error;
+}
 
+export default Media;

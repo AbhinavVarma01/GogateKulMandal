@@ -4,6 +4,7 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import './i18n';
+import ErrorBoundary from './components/ErrorBoundary';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -105,9 +106,11 @@ function AutoLogoutWrapper({ children }) {
 
 root.render(
   <React.StrictMode>
-    <AutoLogoutWrapper>
-      <App />
-    </AutoLogoutWrapper>
+    <ErrorBoundary>
+      <AutoLogoutWrapper>
+        <App />
+      </AutoLogoutWrapper>
+    </ErrorBoundary>
   </React.StrictMode>
 );
 

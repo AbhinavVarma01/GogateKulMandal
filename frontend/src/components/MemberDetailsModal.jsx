@@ -28,12 +28,10 @@ export function MemberDetailsModal({ isOpen, onClose, member }) {
       
       for (const serNo of memberIds) {
         try {
-          const response = await fetch(`http://localhost:4000/api/family/members/by-serno/${serNo}`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.member) {
-              members[serNo] = formatName(data.member);
-            }
+          const response = await api.get(`/api/family/members/by-serno/${serNo}`);
+          const data = response.data;
+          if (data.member) {
+            members[serNo] = formatName(data.member);
           }
         } catch (error) {
           console.error(`Error fetching member ${serNo}:`, error);
@@ -80,11 +78,8 @@ export function MemberDetailsModal({ isOpen, onClose, member }) {
   const getParentName = async (serNo) => {
     if (!serNo) return null;
     try {
-      const response = await fetch(`http://localhost:4000/api/family/members/by-serno/${serNo}`);
-      if (response.ok) {
-        const data = await response.json();
-        return formatName(data.member);
-      }
+      const response = await api.get(`/api/family/members/by-serno/${serNo}`);
+      return formatName(response.data.member);
     } catch (error) {
       console.error('Error fetching parent:', error);
     }

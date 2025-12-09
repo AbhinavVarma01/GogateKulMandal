@@ -40,6 +40,21 @@ const Navbar = () => {
     return 'user';
   };
 
+  // Get user vansh number
+  const getUserVansh = () => {
+    const userStr = typeof window !== 'undefined' ? 
+      (localStorage.getItem('user') || localStorage.getItem('currentUser')) : null;
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        return user.managedVansh || user.vanshNo || null;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  };
+
   // Listen for token changes (login/logout in other tabs/windows)
   useEffect(() => {
     const handleStorage = () => {
@@ -409,14 +424,16 @@ const Navbar = () => {
                         </Link>
                       );
                     } else if (role === 'admin' || role === 'master_admin') {
-                      // Admin users see Admin Dashboard
+                      // Admin users see Admin Dashboard with vansh number
+                      const vansh = getUserVansh();
+                      console.log('Admin vansh number:', vansh);
                       return (
                         <Link 
                           to="/admin-dashboard" 
                           className="hidden sm:inline-flex items-center px-4 py-2.5 text-purple-700 bg-purple-100 hover:bg-purple-200 font-semibold rounded-xl shadow-sm transition-all duration-200"
                           onClick={e => handleProtectedNav(e, '/admin-dashboard')}
                         >
-                          Admin Dashboard
+                          {vansh ? `Admin Dashboard ${vansh}` : 'Admin Dashboard'}
                         </Link>
                       );
                     } else {

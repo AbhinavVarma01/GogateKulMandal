@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, MapPin, User, Clock, Filter, Search, X, Plus, Upload, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import axios from 'axios';
+import api from '../utils/api';
 import Footer from '../components/Footer';
 import SuccessToast from '../components/SuccessToast';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -28,6 +28,7 @@ const AddEventModal = ({ onClose, onSubmit }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [currentUserVansh, setCurrentUserVansh] = useState('');
 
   // Fetch current user and auto-fill creator info
   useEffect(() => {
@@ -40,12 +41,7 @@ const AddEventModal = ({ onClose, onSubmit }) => {
           return;
         }
 
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
-        const response = await axios.get(`${API_URL}/api/auth/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await api.get('/api/auth/me');
 
         const user = response.data;
         console.log('Current user:', user);
@@ -56,8 +52,10 @@ const AddEventModal = ({ onClose, onSubmit }) => {
           createdByVanshNo: user.VanshNo || '',
           createdByName: user.firstName || user.name || user.username || ''
         }));
+        setCurrentUserVansh(user.VanshNo || '');
       } catch (error) {
         console.error('Error fetching current user:', error);
+        setCurrentUserVansh('');
       } finally {
         setIsLoadingUser(false);
       }
@@ -871,12 +869,26 @@ export default function EventsPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [currentUserVansh, setCurrentUserVansh] = useState('');
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+  // Fetch current user vansh once to scope events
+  useEffect(() => {
+    const loadUserVansh = async () => {
+      try {
+        const res = await api.get('/api/auth/me');
+        const vansh = res.data?.VanshNo || res.data?.vansh || '';
+        setCurrentUserVansh(vansh ? `${vansh}`.trim() : '');
+      } catch (err) {
+        console.warn('Unable to fetch current user vansh for events:', err);
+        setCurrentUserVansh('');
+      }
+    };
+    loadUserVansh();
+  }, []);
 
   useEffect(() => {
     fetchEvents();
-  }, []); // Only fetch once on mount, filtering is done on frontend
+  }, [currentUserVansh]);
 
   const computeStatus = (evt) => {
     try {
@@ -903,7 +915,11 @@ export default function EventsPage() {
     setError(null);
     try {
       // Fetch all events - filtering will be done on frontend
-      const response = await axios.get(`${API_URL}/api/events`);
+      const params = {};
+      if (currentUserVansh) {
+        params.vansh = currentUserVansh;
+      }
+      const response = await api.get('/api/events', Object.keys(params).length ? { params } : undefined);
       
       if (response.data.success) {
         const enriched = (response.data.data || []).map(e => ({ ...e, status: e.status || computeStatus(e) }));
@@ -919,7 +935,7 @@ export default function EventsPage() {
 
   const handleEventClick = async (event) => {
     try {
-      const response = await axios.get(`${API_URL}/api/events/${event._id}`);
+      const response = await api.get(`/api/events/${event._id}`);
       if (response.data.success) {
         setSelectedEvent(response.data.data);
         setShowDetailModal(true);
@@ -937,11 +953,10 @@ export default function EventsPage() {
     }
 
     try {
-      await axios.post(
-        `${API_URL}/api/events`,
-        eventData,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      if (!eventData.createdByVanshNo && currentUserVansh) {
+        eventData.createdByVanshNo = currentUserVansh;
+      }
+      await api.post('/api/events', eventData, { headers: { Authorization: `Bearer ${token}` } });
       
       // Show success toast
       setShowSuccessToast(true);

@@ -13,7 +13,10 @@ import {
   Clock,
   Sparkles,
   Shield,
-  Star
+  Star,
+  X,
+  LogOut,
+  AlertTriangle
 } from 'lucide-react';
 
 
@@ -43,7 +46,7 @@ const Dashboard = () => {
         return;
       }
       try {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+        const API_URL = import.meta.env.VITE_API_URL || process.env.REACT_APP_API_URL || window.location.origin;
         const res = await axios.get(`${API_URL}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -75,15 +78,16 @@ const Dashboard = () => {
   const [upcomingEvents, setUpcomingEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+  const API_URL = import.meta.env.VITE_API_URL || process.env.REACT_APP_API_URL || window.location.origin;
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        const vanshParam = user?.vanshNo !== undefined && user?.vanshNo !== null ? String(user.vanshNo).trim() : '';
         const [newsRes, eventsRes] = await Promise.all([
-          axios.get(`${API_URL}/api/news`, { params: { limit: 10 } }),
-          axios.get(`${API_URL}/api/events`, { params: { limit: 10 } })
+          axios.get(`${API_URL}/api/news`, { params: { limit: 10, vansh: vanshParam, _t: Date.now() } }),
+          axios.get(`${API_URL}/api/events`, { params: { limit: 10, vansh: vanshParam, _t: Date.now() } })
         ]);
 
         const news = newsRes?.data?.data || [];
@@ -267,7 +271,7 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-amber-900 flex items-center">
                 <Calendar className="mr-2 text-amber-600" size={24} />
-                <span>Upcoming Events</span>
+                <span>Gogate Events</span>
               </h2>
               <Link to="/gogte-events" className="text-amber-600 hover:text-amber-800 text-sm font-semibold">View All</Link>
             </div>
@@ -278,14 +282,9 @@ const Dashboard = () => {
                 <div key={event.id} className="border border-amber-200 rounded-xl p-5 hover:shadow-lg transition-shadow bg-white mb-5 last:mb-0 last:border-b-0">
                   <h3 className="font-bold text-amber-900 mb-2 hover:text-amber-600 cursor-pointer text-lg">{event.title}</h3>
                   <p className="text-amber-800 text-base mb-2">{event.location}</p>
-                  <div className="flex items-center justify-between text-xs text-amber-700">
-                    <div className="flex items-center space-x-4">
-                      <span className="flex items-center"><Calendar size={14} className="mr-1" />{event.date}</span>
-                      <span className="flex items-center"><Clock size={14} className="mr-1" />{event.time}</span>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <span className="flex items-center"><Users size={14} className="mr-1" />{event.attendees} attending</span>
-                    </div>
+                  <div className="flex items-center space-x-4 text-xs text-amber-700">
+                    <span className="flex items-center"><Calendar size={14} className="mr-1" />{event.date}</span>
+                    <span className="flex items-center"><Clock size={14} className="mr-1" />{event.time}</span>
                   </div>
                   <div className="mt-4">
                     <button className="text-amber-600 hover:text-amber-800 text-base font-semibold" onClick={() => window.location.href = '/gogte-events'}>View More →</button>
@@ -308,35 +307,71 @@ const Dashboard = () => {
 
       {/* Profile Modal */}
       {showProfile && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-2xl shadow-lg max-w-3xl w-full p-6 relative overflow-y-auto max-h-[90vh]">
-            <button
-              className="absolute top-4 right-4 text-gray-500 hover:text-orange-600 text-2xl font-bold"
-              onClick={() => setShowProfile(false)}
-              aria-label="Close Profile"
-            >
-              ×
-            </button>
-            <Profile />
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setShowProfile(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full mx-4 relative overflow-hidden animate-slideUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header with Gradient */}
+            <div className="sticky top-0 z-10 bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                  <User className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Your Profile</h2>
+                  <p className="text-orange-50 text-sm">Manage your personal information</p>
+                </div>
+              </div>
+              <button
+                className="p-2 hover:bg-white/20 rounded-lg transition-all duration-200 group"
+                onClick={() => setShowProfile(false)}
+                aria-label="Close Profile"
+              >
+                <X className="w-6 h-6 text-white group-hover:rotate-90 transition-transform duration-300" />
+              </button>
+            </div>
+            
+            {/* Modal Content with custom scrollbar */}
+            <div className="overflow-y-auto max-h-[calc(90vh-80px)] p-6 custom-scrollbar">
+              <Profile />
+            </div>
           </div>
         </div>
       )}
 
       {/* Logout Confirmation Modal */}
       {showLogoutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-2xl shadow-lg max-w-sm w-full p-6 relative">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Confirm Logout</h2>
-            <p className="text-gray-700 mb-6">Are you sure you want to logout?</p>
-            <div className="flex justify-end gap-3">
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fadeIn"
+          onClick={() => setShowLogoutModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-scaleIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Warning Icon Header */}
+            <div className="bg-gradient-to-br from-orange-50 to-red-50 px-6 py-8 flex flex-col items-center">
+              <div className="p-4 bg-orange-100 rounded-full mb-4">
+                <AlertTriangle className="w-12 h-12 text-orange-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Confirm Logout</h2>
+              <p className="text-gray-600 text-center">Are you sure you want to logout from your account?</p>
+            </div>
+            
+            {/* Action Buttons */}
+            <div className="px-6 py-6 bg-gray-50 flex gap-3">
               <button
-                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300"
+                className="flex-1 px-6 py-3 rounded-xl bg-white border-2 border-gray-200 text-gray-700 font-semibold hover:bg-gray-100 hover:border-gray-300 transition-all duration-200 shadow-sm"
                 onClick={() => setShowLogoutModal(false)}
               >
                 Cancel
               </button>
               <button
-                className="px-4 py-2 rounded-lg bg-orange-600 text-white hover:bg-orange-700"
+                className="flex-1 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold hover:from-orange-700 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                 onClick={() => {
                   setShowLogoutModal(false);
                   try {
@@ -346,6 +381,7 @@ const Dashboard = () => {
                   navigate('/login', { replace: true });
                 }}
               >
+                <LogOut className="w-5 h-5" />
                 Logout
               </button>
             </div>
@@ -355,5 +391,72 @@ const Dashboard = () => {
   </div>
   );
 };
+
+// Add custom styles for animations and scrollbar
+const styles = `
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes scaleIn {
+    from { 
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to { 
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  
+  .animate-fadeIn {
+    animation: fadeIn 0.2s ease-out;
+  }
+  
+  .animate-slideUp {
+    animation: slideUp 0.3s ease-out;
+  }
+  
+  .animate-scaleIn {
+    animation: scaleIn 0.3s ease-out;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #fb923c, #f97316);
+    border-radius: 10px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #f97316, #ea580c);
+  }
+`;
+
+// Inject styles
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = styles;
+  document.head.appendChild(styleSheet);
+}
 
 export default Dashboard;

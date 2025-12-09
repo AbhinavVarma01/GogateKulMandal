@@ -6,7 +6,7 @@ const router = express.Router();
 // Get all published news (public)
 router.get('/', async (req, res) => {
   try {
-    const { category, limit = 100 } = req.query;
+    const { category, limit = 100, vansh } = req.query;
     
     const db = req.app.locals.db || await req.app.locals.connectToMongo();
     
@@ -20,6 +20,16 @@ router.get('/', async (req, res) => {
     if (category && category !== 'all') {
       filter.category = category;
     }
+    if (vansh !== undefined && vansh !== null && vansh !== '') {
+      const vanshValue = parseInt(vansh);
+      if (!isNaN(vanshValue)) {
+        filter.$or = [
+          { vansh: vanshValue },
+          { authorVanshNo: vanshValue },
+          { visibleToAllVansh: true }  // Include news visible to all vanshes
+        ];
+      }
+    }
     
     const news = await newsCollection
       .find(filter)
@@ -31,6 +41,9 @@ router.get('/', async (req, res) => {
       .limit(parseInt(limit))
       .toArray();
     
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.json({ success: true, data: news });
   } catch (error) {
     console.error('[NEWS] Error fetching news:', error);
@@ -69,7 +82,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', verifyToken, async (req, res) => {
   try {
     console.log('[NEWS POST] Received request body:', JSON.stringify(req.body, null, 2));
-    const { title, content, summary, category, priority, tags, isPublished, authorVanshNo, authorName, visibleToAllVansh, images } = req.body;
+    const { title, content, summary, category, priority, tags, authorVanshNo, authorName, visibleToAllVansh, images, vansh } = req.body;
     
     console.log('[NEWS POST] Validation - title:', !!title, 'content:', !!content);
     
@@ -85,11 +98,12 @@ router.post('/', verifyToken, async (req, res) => {
       category: category || 'General',
       priority: priority || 'Medium',
       tags: tags || [],
-      isPublished: isPublished !== undefined ? isPublished : true,
+      isPublished: true,
       publishDate: Date.now(),
       authorVanshNo: authorVanshNo || null,
       authorName: authorName || 'Anonymous',
-      visibleToAllVansh: visibleToAllVansh !== undefined ? visibleToAllVansh : true,
+      visibleToAllVansh: visibleToAllVansh === true,
+      vansh: vansh !== undefined && vansh !== null && vansh !== '' ? Number(vansh) : null,
       images: images || []
     };
     
@@ -120,7 +134,7 @@ router.put('/:id', verifyToken, async (req, res) => {
       return res.status(404).json({ success: false, message: 'News not found' });
     }
     
-    const { title, content, summary, category, priority, tags, isPublished } = req.body;
+    const { title, content, summary, category, priority, tags, isPublished, images, visibleToAllVansh } = req.body;
     
     const updateData = {};
     if (title) updateData.title = title;
@@ -129,6 +143,8 @@ router.put('/:id', verifyToken, async (req, res) => {
     if (category) updateData.category = category;
     if (priority) updateData.priority = priority;
     if (tags) updateData.tags = tags;
+    if (images !== undefined) updateData.images = images;
+    if (visibleToAllVansh !== undefined) updateData.visibleToAllVansh = visibleToAllVansh === true;
     if (isPublished !== undefined) {
       updateData.isPublished = isPublished;
       if (isPublished && !news.publishDate) {

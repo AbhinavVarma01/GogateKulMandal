@@ -28,9 +28,15 @@ async function fixRamkrishna() {
     } else {
       console.log('❌ No records updated');
     }
+  } catch (error) {
+    console.error('Error while updating Ramkrishna record:', error);
+    throw error;
   } finally {
     await client.close();
   }
 }
 
-fixRamkrishna();
+fixRamkrishna().catch((error) => {
+  console.error('Fatal error in fix-ramkrishna script:', error);
+  process.exit(1);
+});

@@ -31,9 +31,15 @@ async function check() {
     } else {
       console.log('Ballal not found!');
     }
+  } catch (error) {
+    console.error('Error while checking Ramkrishna/Ballal data:', error);
+    throw error;
   } finally {
     await client.close();
   }
 }
 
-check();
+check().catch((error) => {
+  console.error('Fatal error in check-ramkrishna script:', error);
+  process.exit(1);
+});

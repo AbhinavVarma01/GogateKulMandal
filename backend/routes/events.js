@@ -16,7 +16,7 @@ const convertTo12Hour = (time24) => {
 // Get all events (public)
 router.get('/', async (req, res) => {
   try {
-    const { eventType, status, limit = 100 } = req.query;
+    const { eventType, status, limit = 100, vansh } = req.query;
     
     const db = req.app.locals.db || await req.app.locals.connectToMongo();
     const eventsCollection = db.collection('events');
@@ -47,6 +47,21 @@ router.get('/', async (req, res) => {
       }
     }
     
+    const visibilityFilter = [];
+    if (vansh !== undefined && vansh !== null && vansh !== '') {
+      const vanshValue = parseInt(vansh);
+      if (!isNaN(vanshValue)) {
+        visibilityFilter.push({ vansh: vanshValue });
+        visibilityFilter.push({ vanshNumber: vanshValue });
+        visibilityFilter.push({ createdByVanshNo: vanshValue });
+        visibilityFilter.push({ visibleToAllVansh: true });  // Include events visible to all vanshes
+      }
+    }
+
+    if (visibilityFilter.length) {
+      filter.$or = visibilityFilter;
+    }
+
     const events = await eventsCollection
       .find(filter)
       // Exclude large image data in list view for better performance
@@ -57,6 +72,9 @@ router.get('/', async (req, res) => {
       .limit(parseInt(limit))
       .toArray();
     
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.json({ success: true, data: events });
   } catch (error) {
     console.error('[EVENTS] Error fetching events:', error);
@@ -102,7 +120,8 @@ router.post('/', verifyToken, async (req, res) => {
       eventType,
       priority,
       eventImage,
-      visibleToAllVansh
+      visibleToAllVansh,
+      vansh
     } = req.body;
     
     if (!title || !title.trim() || !description || !description.trim()) {
@@ -130,6 +149,8 @@ router.post('/', verifyToken, async (req, res) => {
     const eventTypeValue = eventType || 'Other';
     const priorityValue = priority || 'Medium';
     const images = Array.isArray(eventImage) ? eventImage : eventImage ? [eventImage] : [];
+    const vanshValue = vansh !== undefined && vansh !== null && vansh !== '' ? Number(vansh) : null;
+    
     const eventData = {
       title: cleanedTitle,
       eventName: cleanedEventName || cleanedTitle,
@@ -138,7 +159,8 @@ router.post('/', verifyToken, async (req, res) => {
       createdByName: createdByNameValue || 'Anonymous',
       eventType: eventTypeValue,
       priority: priorityValue,
-      visibleToAllVansh: visibleToAllVansh !== undefined ? visibleToAllVansh : true,
+      visibleToAllVansh: visibleToAllVansh === true,
+      vansh: vanshValue,
       createdAt: new Date()
     };
 
@@ -198,7 +220,8 @@ router.put('/:id', verifyToken, async (req, res) => {
       eventType,
       priority,
       eventImage,
-      visibleToAllVansh
+      visibleToAllVansh,
+      vansh
     } = req.body;
     
     const updateData = {};
@@ -213,8 +236,9 @@ router.put('/:id', verifyToken, async (req, res) => {
     if (toTime) updateData.toTime = convertTo12Hour(toTime);
     if (eventType) updateData.eventType = eventType;
     if (priority) updateData.priority = priority;
-    if (eventImage) updateData.eventImage = eventImage;
-    if (visibleToAllVansh !== undefined) updateData.visibleToAllVansh = visibleToAllVansh;
+    if (eventImage !== undefined) updateData.eventImage = eventImage;
+    if (visibleToAllVansh !== undefined) updateData.visibleToAllVansh = visibleToAllVansh === true;
+    if (vansh !== undefined) updateData.vansh = vansh !== null && vansh !== '' ? Number(vansh) : null;
     updateData.updatedAt = new Date();
     
     await eventsCollection.updateOne(

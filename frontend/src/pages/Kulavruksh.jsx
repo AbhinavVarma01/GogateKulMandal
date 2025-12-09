@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Crosshair, ZoomIn, ZoomOut, RotateCcw, Eye, Navigation } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Crosshair, ZoomIn, ZoomOut, RotateCcw, Eye, Navigation, RefreshCw } from 'lucide-react';
 import api from '../utils/api';
 
 const CARD_WIDTH = 220;
@@ -93,6 +93,7 @@ const Kulavruksh = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const dragRef = useRef({ x: 0, y: 0 });
+  const [refreshing, setRefreshing] = useState(false);
 
   const fetchMembers = useCallback(async () => {
     try {
@@ -128,7 +129,11 @@ const Kulavruksh = () => {
         return;
       }
       
-      const membersResponse = await api.get('/api/family/members');
+      const params = {};
+      if (effectiveVansh) {
+        params.vansh = effectiveVansh;
+      }
+      const membersResponse = await api.get('/api/family/members', { params });
       const allMembers = membersResponse.data?.members || membersResponse.data || [];
       const cleanedMembers = deduplicateMembers(allMembers);
       
@@ -210,6 +215,12 @@ const Kulavruksh = () => {
   const handleResetZoom = useCallback(() => {
     setZoom(1);
   }, []);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchMembers();
+    setRefreshing(false);
+  }, [fetchMembers]);
 
   useEffect(() => {
     const fontLink = document.createElement('link');
@@ -446,6 +457,26 @@ const Kulavruksh = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      {/** Rendered vansh selector for master admin; others just see their vansh label */}
+      {userRole === 'master_admin' && vanshList.length > 0 && (
+        <div className="bg-white border-b border-gray-200 px-6 py-3">
+          <div className="max-w-5xl mx-auto flex items-center justify-between gap-4">
+            <div className="text-sm text-gray-500 font-medium">Select Vansh</div>
+            <select
+              value={selectedVansh}
+              onChange={(e) => setSelectedVansh(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 text-gray-700"
+            >
+              {vanshList.map((v) => (
+                <option key={v} value={v}>
+                  Vansh {v}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between gap-6">
           
@@ -527,6 +558,20 @@ const Kulavruksh = () => {
                 <ZoomIn size={20} />
               </button>
             </div>
+
+            {/* Refresh Button for Admin Users */}
+            {(userRole === 'admin' || userRole === 'master_admin') && (
+              <button
+                type="button"
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed border border-orange-700 shadow-sm"
+                title="Refresh Family Tree"
+              >
+                <RefreshCw size={18} className={refreshing ? 'animate-spin' : ''} />
+                <span className="text-sm font-medium">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+              </button>
+            )}
           </div>
 
           {/* Right Section - Spacer */}
@@ -670,14 +715,15 @@ const Kulavruksh = () => {
                     className="relative rounded-2xl border border-slate-200 bg-white shadow-sm flex flex-col items-center justify-center gap-2 px-4 text-center transition-all hover:shadow-md"
                   >
                     <div
-                      className="w-14 h-14 rounded-full flex items-center justify-center text-white text-sm font-semibold tracking-wide border-2 border-white shadow"
-                      style={{ backgroundColor: badgeColor(primary?.gender), overflow: 'hidden' }}
+                      className="w-14 h-14 rounded-full flex items-center justify-center text-gray-600 text-sm font-semibold tracking-wide border-2 border-white shadow"
+                      style={{ backgroundColor: '#e5e7eb', overflow: 'hidden', padding: '4px' }}
                     >
                       {primary?.profileImage ? (
                         <img
                           src={primary.profileImage}
                           alt={primary?.name || 'Profile'}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full rounded-full"
+                          style={{ objectFit: 'contain' }}
                         />
                       ) : (
                         getInitials(primary)
@@ -729,17 +775,19 @@ const Kulavruksh = () => {
                       } shadow-sm flex flex-col items-center justify-center gap-2 px-4 text-center transition-all ${!placeholder ? 'hover:shadow-md' : ''}`}
                     >
                       <div
-                        className="w-14 h-14 rounded-full flex items-center justify-center text-white text-sm font-semibold tracking-wide border-2 border-white shadow"
+                        className="w-14 h-14 rounded-full flex items-center justify-center text-gray-600 text-sm font-semibold tracking-wide border-2 border-white shadow"
                         style={{
-                          backgroundColor: placeholder ? '#e2e8f0' : badgeColor(displaySpouse?.gender),
-                          overflow: 'hidden'
+                          backgroundColor: placeholder ? '#e2e8f0' : '#e5e7eb',
+                          overflow: 'hidden',
+                          padding: '4px'
                         }}
                       >
                         {displaySpouse?.profileImage ? (
                           <img
                             src={displaySpouse.profileImage}
                             alt={displaySpouse?.name || 'Profile'}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full rounded-full"
+                            style={{ objectFit: 'contain' }}
                           />
                         ) : (
                           getInitials(displaySpouse)

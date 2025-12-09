@@ -49,12 +49,14 @@ const parentsInformationSchema = new mongoose.Schema(
     fatherMobileNumber: String,
     fatherDateOfBirth: Date,
     fatherProfileImage: imageSchema,
+    fatherSerNo: Number, // Link to father's serNo in family tree
     motherFirstName: String,
     motherMiddleName: String,
     motherLastName: String,
     motherMobileNumber: String,
     motherDateOfBirth: Date,
     motherProfileImage: imageSchema,
+    motherSerNo: Number, // Link to mother's serNo in family tree
   },
   { _id: false }
 );
@@ -125,4 +127,12 @@ const membersSchema = new mongoose.Schema(
 membersSchema.index({ vansh: 1, "personalDetails.firstName": 1, "personalDetails.lastName": 1, "personalDetails.middleName": 1 });
 membersSchema.index({ "personalDetails.firstName": "text", "personalDetails.middleName": "text", "personalDetails.lastName": "text" });
 
-export default mongoose.model("Members", membersSchema);
+let Members;
+try {
+  Members = mongoose.models.Members || mongoose.model("Members", membersSchema);
+} catch (error) {
+  console.error("Failed to initialize Members model:", error);
+  throw error;
+}
+
+export default Members;

@@ -28,9 +28,15 @@ async function revertRamkrishna() {
     } else {
       console.log('❌ No records updated');
     }
+  } catch (error) {
+    console.error('Error while reverting Ramkrishna record:', error);
+    throw error;
   } finally {
     await client.close();
   }
 }
 
-revertRamkrishna();
+revertRamkrishna().catch((error) => {
+  console.error('Fatal error in fix-ramkrishna-revert script:', error);
+  process.exit(1);
+});
