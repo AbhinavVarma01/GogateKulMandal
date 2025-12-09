@@ -30,7 +30,7 @@ export function FamilyTreeTable({ onMemberClick }) {
         setLoading(true);
       }
       
-      const token = localStorage.getItem('authToken');
+      const token = sessionStorage.getItem('authToken');
       const response = await fetch(`${API_BASE_URL}/api/dba/family-members`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -68,7 +68,7 @@ export function FamilyTreeTable({ onMemberClick }) {
 
   const handleAddMember = async (memberData) => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = sessionStorage.getItem('authToken');
       const response = await fetch(`${API_BASE_URL}/api/dba/family-members`, {
         method: 'POST',
         headers: {
@@ -94,7 +94,7 @@ export function FamilyTreeTable({ onMemberClick }) {
   const handleEditMember = async (memberData) => {
     if (editingMember) {
       try {
-        const token = localStorage.getItem('authToken');
+        const token = sessionStorage.getItem('authToken');
         const response = await fetch(`${API_BASE_URL}/api/dba/family-members/${editingMember._id}`, {
           method: 'PUT',
           headers: {
@@ -121,7 +121,7 @@ export function FamilyTreeTable({ onMemberClick }) {
   const handleDeleteMember = async () => {
     if (deletingMember) {
       try {
-        const token = localStorage.getItem('authToken');
+        const token = sessionStorage.getItem('authToken');
         const response = await fetch(`${API_BASE_URL}/api/dba/family-members/${deletingMember._id}`, {
           method: 'DELETE',
           headers: {

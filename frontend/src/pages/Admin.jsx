@@ -363,7 +363,7 @@ const GogteKulAdmin = () => {
 
   const getAdminVansh = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = sessionStorage.getItem('authToken');
       if (token) {
         const response = await api.get('/api/auth/me');
         console.log('Auth response:', response.data);

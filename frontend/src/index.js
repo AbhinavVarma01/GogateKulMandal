@@ -17,7 +17,7 @@ function AutoLogoutWrapper({ children }) {
     const doLogout = () => {
       try {
         // Try to notify backend logout endpoint if it exists using sendBeacon or fetch keepalive
-        const token = localStorage.getItem('authToken');
+        const token = sessionStorage.getItem('authToken');
         const base = process.env.REACT_APP_API_URL || 'http://localhost:4000';
         const logoutUrl = `${base}/api/auth/logout`;
 
@@ -54,7 +54,7 @@ function AutoLogoutWrapper({ children }) {
       } finally {
         // Always clear client-side auth state
         try {
-          localStorage.removeItem('authToken');
+          sessionStorage.removeItem('authToken');
         } catch (_) {}
       }
     };

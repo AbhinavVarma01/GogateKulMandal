@@ -25,7 +25,7 @@ export function Dashboard() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = sessionStorage.getItem('authToken');
       const response = await fetch(`${API_BASE_URL}/api/dba/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -57,7 +57,7 @@ export function Dashboard() {
     try {
       console.log('Fetching relationships for member ID:', memberId);
       console.log('API Base URL:', API_BASE_URL);
-      const token = localStorage.getItem('authToken');
+      const token = sessionStorage.getItem('authToken');
       console.log('Auth token exists:', !!token);
       
       // First test if server is running

@@ -13,12 +13,26 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.FORM_SERVER_PORT || process.env.PORT || 5000;
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:3000";
-const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://gogtekulam:gogtekul@cluster0.t3c0jt6.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0";
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || process.env.CLIENT_URL || "http://localhost:3000";
+const PRODUCTION_URL = process.env.PRODUCTION_URL;
+const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
+
+if (!MONGO_URI) {
+  console.error('❌ MONGO_URI environment variable is not set!');
+  process.exit(1);
+}
+
+// Configure allowed origins for CORS
+const allowedOrigins = [
+  CLIENT_ORIGIN,
+  PRODUCTION_URL,
+  "http://localhost:3000",
+  "http://localhost:4000"
+].filter(Boolean); // Remove undefined/null values
 
 // Allow requests from both frontend and other origins
 app.use(cors({ 
-  origin: [CLIENT_ORIGIN, "http://localhost:3000", "http://localhost:4000"],
+  origin: allowedOrigins,
   credentials: true 
 }));
 app.use(express.json());

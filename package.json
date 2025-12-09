@@ -1,0 +1,15 @@
+{
+  "name": "gogtekulavruttanta-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install && cd ../backend/form/server && npm install",
+    "build:frontend": "cd frontend && npm run build",
+    "start:backend": "cd backend && npm start",
+    "start:form-server": "cd backend/form/server && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "deploy:check": "node check-deployment.js"
+  },
+  "description": "Gogte Kulavruttanta - Family Heritage Portal"
+}

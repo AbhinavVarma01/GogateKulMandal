@@ -2,13 +2,13 @@ import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
 function isAuthenticated() {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
+  const token = typeof window !== 'undefined' ? sessionStorage.getItem('authToken') : null;
   return !!(token && token !== 'undefined' && token !== 'null' && token.trim() !== '');
 }
 
 function getUserRole() {
   const userStr = typeof window !== 'undefined' ? 
-    (localStorage.getItem('user') || localStorage.getItem('currentUser')) : null;
+    (sessionStorage.getItem('user') || sessionStorage.getItem('currentUser')) : null;
   if (userStr) {
     try {
       const user = JSON.parse(userStr);

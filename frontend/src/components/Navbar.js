@@ -16,7 +16,7 @@ const Navbar = () => {
 
   // Track token reactively
   const [token, setToken] = useState(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('authToken') : null
+    typeof window !== 'undefined' ? sessionStorage.getItem('authToken') : null
   );
   const [isLoggedIn, setIsLoggedIn] = useState(() =>
     !!(token && token !== 'undefined' && token !== 'null' && token.trim() !== '')
@@ -29,21 +29,21 @@ const Navbar = () => {
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        console.log('User data from localStorage:', user);
+        // User data retrieved from localStorage
         return user.role || 'user';
       } catch (e) {
-        console.log('Error parsing user data:', e);
+        // Error parsing user data
         return 'user';
       }
     }
-    console.log('No user data found in localStorage');
+    // No user data found in localStorage
     return 'user';
   };
 
   // Get user vansh number
   const getUserVansh = () => {
     const userStr = typeof window !== 'undefined' ? 
-      (localStorage.getItem('user') || localStorage.getItem('currentUser')) : null;
+      (sessionStorage.getItem('user') || sessionStorage.getItem('currentUser')) : null;
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
@@ -58,7 +58,7 @@ const Navbar = () => {
   // Listen for token changes (login/logout in other tabs/windows)
   useEffect(() => {
     const handleStorage = () => {
-      const t = localStorage.getItem('authToken');
+      const t = sessionStorage.getItem('authToken');
       setToken(t);
       setIsLoggedIn(!!(t && t !== 'undefined' && t !== 'null' && t.trim() !== ''));
     };
@@ -73,7 +73,7 @@ const Navbar = () => {
 
   // Update token on route change (for immediate effect after login/logout)
   useEffect(() => {
-  const t = localStorage.getItem('authToken');
+  const t = sessionStorage.getItem('authToken');
   setToken(t);
   }, [location]);
 
@@ -140,8 +140,8 @@ const Navbar = () => {
 
   const handleLogout = () => {
     try {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('currentUser');
+      sessionStorage.removeItem('authToken');
+      sessionStorage.removeItem('currentUser');
       setToken(null);
       setIsLoggedIn(false);
       navigate('/login', { replace: true });
@@ -410,7 +410,7 @@ const Navbar = () => {
                 <>
                   {(() => {
                     const role = getUserRole();
-                    console.log('Current user role:', role);
+                    {/* Current user role: {role} */}
                     
                     if (role === 'dba') {
                       // DBA users only see DBA Dashboard
@@ -426,7 +426,7 @@ const Navbar = () => {
                     } else if (role === 'admin' || role === 'master_admin') {
                       // Admin users see Admin Dashboard with vansh number
                       const vansh = getUserVansh();
-                      console.log('Admin vansh number:', vansh);
+                      {/* Admin vansh number: {vansh} */}
                       return (
                         <Link 
                           to="/admin-dashboard" 

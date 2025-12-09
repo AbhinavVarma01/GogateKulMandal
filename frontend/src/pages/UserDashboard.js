@@ -40,7 +40,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     async function fetchUser() {
-      const token = localStorage.getItem('authToken');
+      const token = sessionStorage.getItem('authToken');
       if (!token || token === 'undefined' || token === 'null') {
         setUser({ firstName: 'Guest', vanshNo: null });
         return;
@@ -375,8 +375,8 @@ const Dashboard = () => {
                 onClick={() => {
                   setShowLogoutModal(false);
                   try {
-                    localStorage.removeItem('authToken');
-                    localStorage.removeItem('currentUser');
+                    sessionStorage.removeItem('authToken');
+                    sessionStorage.removeItem('currentUser');
                   } catch (_) {}
                   navigate('/login', { replace: true });
                 }}

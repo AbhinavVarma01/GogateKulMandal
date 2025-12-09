@@ -28,7 +28,7 @@ const AddNewsModal = ({ onClose, onSubmit }) => {
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const token = localStorage.getItem('authToken');
+        const token = sessionStorage.getItem('authToken');
         if (!token) {
           console.error('No auth token found');
           setIsLoadingUser(false);

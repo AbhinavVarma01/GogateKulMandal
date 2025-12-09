@@ -10,6 +10,7 @@ import createAuthRouter from './routes/auth.js';
 import newsRouter from './routes/news.js';
 import eventsRouter from './routes/events.js';
 import mediaRouter from './routes/media.js';
+import familyRoutes from './form/server/routes/familyRoutes.js';
 import fs from 'fs';
 import { verifyToken, requireDBA, requireAdmin } from './middleware/auth.js';
 import { upload, parseNestedFields } from './middleware/upload.js';
@@ -25,6 +26,9 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increased limit for Base64 images
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Serve static uploads folder from form server
+app.use("/uploads", express.static(join(__dirname, 'form', 'server', 'uploads')));
+
 // Global error handler for JSON parsing errors
 app.use((error, req, res, next) => {
   if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
@@ -34,12 +38,17 @@ app.use((error, req, res, next) => {
   next();
 });
 
-const mongoUri = 'mongodb+srv://gogtekulam:gogtekul@cluster0.t3c0jt6.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
 const dbName = 'test';
 const collectionName = 'members';
 const newsCollectionName = 'news';
 const eventsCollectionName = 'events';
 const sheetsCollectionName = 'members';
+
+// Create mongoose URI with database name appended
+const mongooseUri = mongoUri.includes('?') 
+  ? mongoUri.replace('?', `/${dbName}?`)
+  : `${mongoUri.replace(/\/$/, '')}/${dbName}`;
 
 let client;
 let db;
@@ -50,6 +59,14 @@ async function connectToMongo() {
     client = new MongoClient(mongoUri);
     await client.connect();
     db = client.db(dbName);
+    
+    // Also connect mongoose for form server models (must use same database name)
+    if (mongoose.connection.readyState !== 1) {
+      await mongoose.connect(mongooseUri);
+      console.log('✅ Mongoose connected for form server models');
+      console.log('📊 Database:', mongoose.connection.db.databaseName);
+    }
+    
     try {
       // Ensure unique index for dedupe on GogteKulamandalFamily
       await db.collection(collectionName).createIndex({ _sheetRowKey: 1 }, { unique: true, name: 'uniq_sheet_row_key' });
@@ -835,6 +852,19 @@ app.use('/api/auth', createAuthRouter(connectToMongo));
 app.use('/api/news', newsRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api/media', mediaRouter);
+
+// Form server routes (merged from form/server/server.js)
+app.use('/api/family', familyRoutes);
+
+// Health check endpoint
+app.get('/health', (_req, res) => {
+  try {
+    res.json({ status: 'ok' });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(500).json({ status: 'error', message: error.message });
+  }
+});
 
 // Admin routes
 app.get('/api/admin/stats', verifyToken, requireAdmin, async (req, res) => {
@@ -1682,7 +1712,7 @@ app.patch('/api/family/registrations/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const FORM_SERVER_PORT = process.env.FORM_SERVER_PORT || process.env.FORM_PORT || '5000';
-    const formServerUrl = `http://localhost:${FORM_SERVER_PORT}/api/family/registrations/${id}/status`;
+    const formServerUrl = `${FORM_SERVER_URL}/api/family/registrations/${id}/status`;
     
     console.log(`[proxy] Forwarding PATCH request to form server: ${formServerUrl}`);
     console.log(`[proxy] Request body:`, req.body);
@@ -1825,7 +1855,7 @@ app.delete('/api/family/rejected', async (req, res) => {
     const FORM_SERVER_PORT = process.env.FORM_SERVER_PORT || process.env.FORM_PORT || '5000';
     const vansh = req.query.vansh;
     const queryString = vansh ? `?vansh=${encodeURIComponent(vansh)}` : '';
-    const formServerUrl = `http://localhost:${FORM_SERVER_PORT}/api/family/rejected${queryString}`;
+    const formServerUrl = `${FORM_SERVER_URL}/api/family/rejected${queryString}`;
     
     console.log(`[proxy] Forwarding DELETE rejected list request to form server: ${formServerUrl}`);
     
@@ -1846,45 +1876,39 @@ app.delete('/api/family/rejected', async (req, res) => {
 });
 
 const port = process.env.PORT || 4000;
-app.listen(port, () => {
-  console.log(`Backend listening on port ${port}`);
-  console.log(`Test endpoint: http://localhost:${port}/api/test`);
-  console.log(`\n🌳 NEW Tree Endpoints Available:`);
-  console.log(`  GET http://localhost:${port}/api/family/tree/members-transformed`);
-  console.log(`  GET http://localhost:${port}/api/family/tree/hierarchical`);
-  console.log(`  GET http://localhost:${port}/api/family/tree/root/:serNo`);
-  console.log(`  GET http://localhost:${port}/api/family/tree/member/:serNo/subtree`);
-  console.log(`  GET http://localhost:${port}/api/family/tree/member/:serNo/ancestors`);
-  console.log(`  GET http://localhost:${port}/api/family/tree/member/:serNo/descendants`);
-  console.log(`  GET http://localhost:${port}/api/family/tree/stats`);
-  console.log(`\n👨‍💼 Admin Endpoints Available:`);
-  console.log(`  GET http://localhost:${port}/api/family/registrations?vansh=61`);
-  console.log(`  GET http://localhost:${port}/api/family/all?vansh=61`);
-  console.log(`  GET http://localhost:${port}/api/family/rejected?vansh=61`);
-});
 
-// Spin up the form backend inside the same process for unified deployment
-const startFormBackendInProcess = async () => {
+// Start server with database connection
+const startServer = async () => {
   try {
-    console.log('[startup] Attempting to start form backend...');
-    if (!process.env.FORM_SERVER_PORT) {
-      process.env.FORM_SERVER_PORT = process.env.FORM_PORT || '5000';
-    }
-    console.log(`[startup] Form server will use port: ${process.env.FORM_SERVER_PORT}`);
+    // Ensure database connection is established before starting server
+    await connectToMongo();
+    console.log('✅ Database connections established');
     
-    // Construct absolute path to form server
-    const formServerPath = join(__dirname, 'form', 'server', 'server.js');
-    console.log(`[startup] Loading form server from: ${formServerPath}`);
-    
-    // Import using file:// URL for Windows compatibility
-    const formServerUrl = new URL(`file:///${formServerPath.replace(/\\/g, '/')}`);
-    await import(formServerUrl);
-    console.log(`✅ [startup] Form backend successfully started on port ${process.env.FORM_SERVER_PORT}`);
+    app.listen(port, () => {
+      console.log(`Backend listening on port ${port}`);
+      console.log(`Test endpoint: http://localhost:${port}/api/test`);
+      console.log(`\n🌳 NEW Tree Endpoints Available:`);
+      console.log(`  GET http://localhost:${port}/api/family/tree/members-transformed`);
+      console.log(`  GET http://localhost:${port}/api/family/tree/hierarchical`);
+      console.log(`  GET http://localhost:${port}/api/family/tree/root/:serNo`);
+      console.log(`  GET http://localhost:${port}/api/family/tree/member/:serNo/subtree`);
+      console.log(`  GET http://localhost:${port}/api/family/tree/member/:serNo/ancestors`);
+      console.log(`  GET http://localhost:${port}/api/family/tree/member/:serNo/descendants`);
+      console.log(`  GET http://localhost:${port}/api/family/tree/stats`);
+      console.log(`\n👨‍💼 Admin Endpoints Available:`);
+      console.log(`  GET http://localhost:${port}/api/family/registrations?vansh=61`);
+      console.log(`  GET http://localhost:${port}/api/family/all?vansh=61`);
+      console.log(`  GET http://localhost:${port}/api/family/rejected?vansh=61`);
+      console.log(`\n📋 Form Registration Endpoint:`);
+      console.log(`  POST http://localhost:${port}/api/family/register`);
+    });
   } catch (error) {
-    console.error('❌ Failed to start embedded form backend:', error);
-    console.error('Error details:', error.message);
-    console.error('Error stack:', error.stack);
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
   }
 };
 
-startFormBackendInProcess();
+startServer();
+
+// Note: Form server functionality is now integrated into this main server
+// The form server routes are available at /api/family/* on the same port (4000)

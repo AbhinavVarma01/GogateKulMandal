@@ -72,6 +72,7 @@ const createTransporter = () => {
 export const sendApprovalEmail = async ({ email, firstName, lastName, username, password }) => {
   try {
     const transporter = createTransporter();
+    const CLIENT_URL = process.env.CLIENT_URL || process.env.CLIENT_ORIGIN || 'http://localhost:3000';
     
     const mailOptions = {
       from: `"GogateKulMandal Heritage" <${process.env.EMAIL_FROM || process.env.GMAIL_USER}>`,

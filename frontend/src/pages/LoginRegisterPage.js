@@ -25,9 +25,9 @@ const LoginRegisterPage = () => {
     setLoading(true);
     try {
       const { token, user } = await apiLogin(email, password);
-      localStorage.setItem('authToken', token);
-      localStorage.setItem('currentUser', JSON.stringify(user));
-      localStorage.setItem('user', JSON.stringify(user));
+      sessionStorage.setItem('authToken', token);
+      sessionStorage.setItem('currentUser', JSON.stringify(user));
+      sessionStorage.setItem('user', JSON.stringify(user));
       if (rememberMe) {
         localStorage.setItem('rememberLogin', JSON.stringify({ email, password, expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000 }));
       } else {

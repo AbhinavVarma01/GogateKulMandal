@@ -52,6 +52,9 @@ const normalizeImageDataUris = (input) => {
 
 export const addFamilyMember = async (req, res) => {
   try {
+    console.log('🔍 Mongoose connection state:', mongoose.connection.readyState);
+    console.log('🔍 Mongoose database:', mongoose.connection.db?.databaseName);
+    
     // Convert uploaded files to base64
     const filesData = {};
     Object.entries(req.files || {}).forEach(([fieldPath, files]) => {
@@ -153,6 +156,8 @@ export const addFamilyMember = async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Error saving family member:", error.message);
+    console.error("❌ Full error:", error);
+    console.error("❌ Error stack:", error.stack);
     
     if (error?.name === "ValidationError") {
       return res.status(400).json({

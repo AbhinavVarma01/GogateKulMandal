@@ -31,7 +31,10 @@ import VaatchaalPage from './pages/VaatchaalPage';
 import NewsApp from './pages/app';
 import FamilyMemberDetailsPage from './pages/FamilyMemberDetailsPage';
 import Kulavruksh from './pages/Kulavruksh';
-console.log("React version at runtime:", React.version);
+// React version logged during development only
+if (process.env.NODE_ENV === 'development') {
+  console.log("React version at runtime:", React.version);
+}
 
 function AppRoutesWithLoader() {
   const location = useLocation();
