@@ -354,7 +354,7 @@ const GogteKulAdmin = () => {
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const recordsPerPage = 10;
+  const recordsPerPage = 15;
   const [totalApprovedMembers, setTotalApprovedMembers] = useState(0);
   const [loadingApprovedMembers, setLoadingApprovedMembers] = useState(false);
   const [adminManagedVansh, setAdminManagedVansh] = useState(null);
@@ -800,6 +800,8 @@ const GogteKulAdmin = () => {
   const paginatedPendingRegistrations = useMemo(() => getCurrentPageData(pendingRegistrations), [pendingRegistrations, currentPage, recordsPerPage]);
   const paginatedApprovedMembers = useMemo(() => getCurrentPageData(approvedMembers), [approvedMembers, currentPage, recordsPerPage]);
   const paginatedRejectedMembers = useMemo(() => getCurrentPageData(filteredRejectedMembers), [filteredRejectedMembers, currentPage, recordsPerPage]);
+  const paginatedNewsItems = useMemo(() => getCurrentPageData(newsItems), [newsItems, currentPage, recordsPerPage]);
+  const paginatedEventsItems = useMemo(() => getCurrentPageData(eventsItems), [eventsItems, currentPage, recordsPerPage]);
 
   // Pagination handlers
   const handleNextPage = () => {
@@ -807,7 +809,11 @@ const GogteKulAdmin = () => {
       ? getTotalPages(pendingRegistrations)
       : activeTab === 'approved'
       ? getTotalPages(approvedMembers)
-      : getTotalPages(filteredRejectedMembers);
+      : activeTab === 'rejected'
+      ? getTotalPages(filteredRejectedMembers)
+      : activeTab === 'news'
+      ? getTotalPages(newsItems)
+      : getTotalPages(eventsItems);
     
     if (currentPage < totalPages) {
       setCurrentPage(currentPage + 1);
@@ -1865,7 +1871,7 @@ const GogteKulAdmin = () => {
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {newsItems.map((news) => (
+                  {paginatedNewsItems.map((news) => (
                     <div key={news._id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
@@ -1911,6 +1917,51 @@ const GogteKulAdmin = () => {
                   ))}
                 </div>
               )}
+
+              {/* News Pagination Controls */}
+              {newsItems.length > recordsPerPage && (
+                <div className="flex items-center justify-center mt-6 px-6 py-4 border-t border-gray-200 bg-gray-50/50 rounded-b-lg">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handlePrevPage}
+                      disabled={currentPage === 1}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        currentPage === 1
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      Previous
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: getTotalPages(newsItems) }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => handlePageClick(page)}
+                          className={`w-10 h-10 rounded-lg font-medium transition-all ${
+                            currentPage === page
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white text-gray-700 hover:bg-blue-100'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={handleNextPage}
+                      disabled={currentPage === getTotalPages(newsItems)}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        currentPage === getTotalPages(newsItems)
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1936,7 +1987,7 @@ const GogteKulAdmin = () => {
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {eventsItems.map((event) => (
+                  {paginatedEventsItems.map((event) => (
                     <div key={event._id} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
@@ -1985,6 +2036,51 @@ const GogteKulAdmin = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Events Pagination Controls */}
+              {eventsItems.length > recordsPerPage && (
+                <div className="flex items-center justify-center mt-6 px-6 py-4 border-t border-gray-200 bg-gray-50/50 rounded-b-lg">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handlePrevPage}
+                      disabled={currentPage === 1}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        currentPage === 1
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          : 'bg-purple-600 text-white hover:bg-purple-700'
+                      }`}
+                    >
+                      Previous
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: getTotalPages(eventsItems) }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => handlePageClick(page)}
+                          className={`w-10 h-10 rounded-lg font-medium transition-all ${
+                            currentPage === page
+                              ? 'bg-purple-600 text-white'
+                              : 'bg-white text-gray-700 hover:bg-purple-100'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={handleNextPage}
+                      disabled={currentPage === getTotalPages(eventsItems)}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        currentPage === getTotalPages(eventsItems)
+                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                          : 'bg-purple-600 text-white hover:bg-purple-700'
+                      }`}
+                    >
+                      Next
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
