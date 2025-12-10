@@ -25,18 +25,18 @@ const Navbar = () => {
   // Get user role
   const getUserRole = () => {
     const userStr = typeof window !== 'undefined' ? 
-      (localStorage.getItem('user') || localStorage.getItem('currentUser')) : null;
+      (sessionStorage.getItem('user') || sessionStorage.getItem('currentUser')) : null;
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        // User data retrieved from localStorage
+        // User data retrieved from sessionStorage
         return user.role || 'user';
       } catch (e) {
         // Error parsing user data
         return 'user';
       }
     }
-    // No user data found in localStorage
+    // No user data found in sessionStorage
     return 'user';
   };
 

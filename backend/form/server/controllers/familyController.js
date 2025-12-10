@@ -759,7 +759,14 @@ export const getMemberById = async (req, res) => {
   try {
     const { id } = req.params;
     const db = mongoose.connection.db;
-    const member = await db.collection('members').findOne({ _id: new mongoose.Types.ObjectId(id) });
+    
+    // Try members collection first
+    let member = await db.collection('members').findOne({ _id: new mongoose.Types.ObjectId(id) });
+
+    // If not found, try Heirarchy_form collection (registrations)
+    if (!member) {
+      member = await db.collection('Heirarchy_form').findOne({ _id: new mongoose.Types.ObjectId(id) });
+    }
 
     if (!member) {
       return res.status(404).json({ success: false, message: "Member not found" });
@@ -779,6 +786,7 @@ export const updateMember = async (req, res) => {
     const updateData = req.body;
     
     console.log(`📝 Updating member ${id}`);
+    console.log(`🔍 Checking in members collection...`);
     
     // Remove fields that shouldn't be updated directly
     delete updateData._id;
@@ -838,21 +846,62 @@ export const updateMember = async (req, res) => {
     flattenedUpdate.updatedAt = new Date();
     
     const db = mongoose.connection.db;
-    const result = await db.collection('members').findOneAndUpdate(
-      { _id: new mongoose.Types.ObjectId(id) },
+    console.log(`🔍 Looking for member with _id: ${id}`);
+    console.log(`🔍 Attempting to parse as ObjectId...`);
+    
+    let objectId;
+    try {
+      objectId = new mongoose.Types.ObjectId(id);
+      console.log(`✅ Successfully parsed ObjectId: ${objectId}`);
+    } catch (err) {
+      console.log(`❌ Failed to parse ObjectId: ${err.message}`);
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
+    
+    // Try to find and update in members collection first
+    console.log(`🔍 Searching in 'members' collection...`);
+    let result = await db.collection('members').findOneAndUpdate(
+      { _id: objectId },
       { $set: flattenedUpdate },
       { returnDocument: 'after' }
     );
 
-    if (!result.value) {
-      return res.status(404).json({ success: false, message: "Member not found" });
+    let updatedDoc = result?.value || result;
+    console.log(`📊 Result from members collection:`, updatedDoc ? 'Found and updated' : 'Not found');
+
+    // If not found in members, try Heirarchy_form collection (for registrations)
+    if (!updatedDoc) {
+      console.log(`⚠️ Not found in 'members' collection, checking 'Heirarchy_form' collection...`);
+      
+      result = await db.collection('Heirarchy_form').findOneAndUpdate(
+        { _id: objectId },
+        { $set: flattenedUpdate },
+        { returnDocument: 'after' }
+      );
+      
+      updatedDoc = result?.value || result;
+      console.log(`📊 Result from Heirarchy_form collection:`, updatedDoc ? 'Found and updated' : 'Not found');
+      
+      if (updatedDoc) {
+        console.log(`✅ Found and updated registration in Heirarchy_form collection`);
+      }
+    } else {
+      console.log(`✅ Found and updated member in members collection`);
+    }
+
+    if (!updatedDoc) {
+      console.log(`❌ Member/Registration not found with _id: ${id}`);
+      return res.status(404).json({ 
+        success: false, 
+        message: "Member not found in either members or registrations collection" 
+      });
     }
 
     console.log(`✅ Member ${id} updated successfully`);
     return res.status(200).json({ 
       success: true, 
       message: "Member updated successfully",
-      data: result.value 
+      data: updatedDoc 
     });
   } catch (error) {
     console.error("❌ Error updating member:", error);

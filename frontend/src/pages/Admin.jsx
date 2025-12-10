@@ -314,6 +314,9 @@ const GogteKulAdmin = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [errorTitle, setErrorTitle] = useState('Error');
   const [isProcessing, setIsProcessing] = useState(false);
   const [rejectedMembers, setRejectedMembers] = useState([]);
   const [approvedMembersData, setApprovedMembersData] = useState([]);
@@ -394,8 +397,8 @@ const GogteKulAdmin = () => {
         fetchRegistrations(vansh),
         fetchRejectedMembers(vansh),
         fetchApprovedMembers(vansh),
-        fetchNews(),
-        fetchEvents()
+        fetchNews(vansh),
+        fetchEvents(vansh)
       ]);
     };
     loadData();
@@ -514,7 +517,14 @@ const GogteKulAdmin = () => {
       }
     } catch (error) {
       console.error('Error creating news:', error);
-      alert(`Failed to create news: ${error.response?.data?.message || error.message}`);
+      try {
+        setErrorTitle('Failed to Create News');
+        setErrorMessage(error.response?.data?.message || error.message || 'Unable to create news item. Please check your input and try again.');
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert('Failed to create news: ' + (error.response?.data?.message || error.message));
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -537,7 +547,14 @@ const GogteKulAdmin = () => {
       }
     } catch (error) {
       console.error('Error updating news:', error);
-      alert(`Failed to update news: ${error.response?.data?.message || error.message}`);
+      try {
+        setErrorTitle('Failed to Update News');
+        setErrorMessage(error.response?.data?.message || error.message || 'Unable to update news item. Please try again.');
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert('Failed to update news: ' + (error.response?.data?.message || error.message));
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -568,7 +585,14 @@ const GogteKulAdmin = () => {
       }
     } catch (error) {
       console.error('Error deleting news:', error);
-      alert(`Failed to delete news: ${error.response?.data?.message || error.message}`);
+      try {
+        setErrorTitle('Failed to Delete News');
+        setErrorMessage(error.response?.data?.message || error.message || 'Unable to delete news item. Please try again.');
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert('Failed to delete news: ' + (error.response?.data?.message || error.message));
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -597,7 +621,14 @@ const GogteKulAdmin = () => {
       }
     } catch (error) {
       console.error('Error creating event:', error);
-      alert(`Failed to create event: ${error.response?.data?.message || error.message}`);
+      try {
+        setErrorTitle('Failed to Create Event');
+        setErrorMessage(error.response?.data?.message || error.message || 'Unable to create event. Please check your input and try again.');
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert('Failed to create event: ' + (error.response?.data?.message || error.message));
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -621,7 +652,14 @@ const GogteKulAdmin = () => {
       }
     } catch (error) {
       console.error('Error updating event:', error);
-      alert(`Failed to update event: ${error.response?.data?.message || error.message}`);
+      try {
+        setErrorTitle('Failed to Update Event');
+        setErrorMessage(error.response?.data?.message || error.message || 'Unable to update event. Please try again.');
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert('Failed to update event: ' + (error.response?.data?.message || error.message));
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -652,7 +690,14 @@ const GogteKulAdmin = () => {
       }
     } catch (error) {
       console.error('Error deleting event:', error);
-      alert(`Failed to delete event: ${error.response?.data?.message || error.message}`);
+      try {
+        setErrorTitle('Failed to Delete Event');
+        setErrorMessage(error.response?.data?.message || error.message || 'Unable to delete event. Please try again.');
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert('Failed to delete event: ' + (error.response?.data?.message || error.message));
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -864,7 +909,15 @@ const GogteKulAdmin = () => {
         // If failed, restore the record
         setIsProcessing(false);
         await fetchRegistrations();
-        alert(`Failed to ${actionType} registration: ${response.data.message}`);
+        const actionText = actionType === 'approve' ? 'Approve' : 'Delete';
+        try {
+          setErrorTitle(`Failed to ${actionText} Registration`);
+          setErrorMessage(response.data.message || `Unable to ${actionType} registration. Please try again.`);
+          setShowErrorModal(true);
+        } catch (stateError) {
+          console.error('Error updating error modal state:', stateError);
+          alert(`Failed to ${actionType} registration: ${response.data.message}`);
+        }
       }
     } catch (err) {
       console.error('❌ Error updating registration:', err);
@@ -877,7 +930,14 @@ const GogteKulAdmin = () => {
       await fetchRegistrations();
       
       // Show error
-      alert(`Failed to update registration status: ${err.response?.data?.message || err.message}`);
+      try {
+        setErrorTitle('Failed to Update Registration');
+        setErrorMessage(err.response?.data?.message || err.message || 'An unexpected error occurred. Please try again.');
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert('Failed to update registration: ' + (err.response?.data?.message || err.message));
+      }
     } finally {
       // Ensure processing state is ALWAYS cleared
       setIsProcessing(false);
@@ -958,7 +1018,15 @@ const GogteKulAdmin = () => {
       }
       
       if (errors.length > 0 && results.length === 0) {
-        alert(`Failed to ${actionText} all registrations. Please try again.`);
+        const actionText = bulkAction.action === 'approve' ? 'approval' : 'rejection';
+        try {
+          setErrorTitle(`Bulk ${actionText.charAt(0).toUpperCase() + actionText.slice(1)} Failed`);
+          setErrorMessage(`Failed to ${actionText} all registrations. Please try again.`);
+          setShowErrorModal(true);
+        } catch (stateError) {
+          console.error('Error updating error modal state:', stateError);
+          alert(`Failed to ${actionText} all registrations.`);
+        }
       }
       
       // Clear selection
@@ -966,7 +1034,15 @@ const GogteKulAdmin = () => {
       
     } catch (err) {
       console.error(`Error in bulk ${actionText}:`, err);
-      alert(`An error occurred during bulk ${actionText}. Please try again.`);
+      const actionText2 = bulkAction.action === 'approve' ? 'approval' : 'rejection';
+      try {
+        setErrorTitle(`Bulk ${actionText2.charAt(0).toUpperCase() + actionText2.slice(1)} Error`);
+        setErrorMessage(`An error occurred during bulk ${actionText2}. Please try again.`);
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert(`An error occurred during bulk ${actionText2}.`);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -975,7 +1051,14 @@ const GogteKulAdmin = () => {
   // Handler to clear all rejected members
   const handleClearRejectedList = () => {
     if (rejectedMembers.length === 0) {
-      alert('No rejected members to clear.');
+      try {
+        setErrorTitle('No Rejected Members');
+        setErrorMessage('There are no rejected members to clear.');
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert('There are no rejected members to clear.');
+      }
       return;
     }
 
@@ -1006,11 +1089,25 @@ const GogteKulAdmin = () => {
           setSuccessMessage('');
         }, 3000);
       } else {
-        alert('Failed to clear rejected list. Please try again.');
+        try {
+          setErrorTitle('Failed to Clear Rejected List');
+          setErrorMessage('Failed to clear rejected list. Please try again.');
+          setShowErrorModal(true);
+        } catch (stateError) {
+          console.error('Error updating error modal state:', stateError);
+          alert('Failed to clear rejected list.');
+        }
       }
     } catch (err) {
       console.error('❌ Error clearing rejected list:', err);
-      alert('An error occurred while clearing the rejected list. Please try again.');
+      try {
+        setErrorTitle('Error Clearing Rejected List');
+        setErrorMessage('An error occurred while clearing the rejected list. Please try again.');
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert('An error occurred while clearing the rejected list.');
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -1032,7 +1129,14 @@ const GogteKulAdmin = () => {
       console.error('❌ Error fetching member details:', error);
       // Keep the modal open with current data if fetch fails
       setEditingMember({ ...member, _loading: false });
-      alert('Could not load complete member details. Showing available data.');
+      try {
+        setErrorTitle('Failed to Load Member Details');
+        setErrorMessage('Could not load complete member details. Showing available data.');
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert('Could not load complete member details.');
+      }
     }
   }, []);
 
@@ -1075,7 +1179,14 @@ const GogteKulAdmin = () => {
       }
     } catch (error) {
       console.error('❌ Error updating member:', error);
-      alert(`Failed to update member: ${error.response?.data?.message || error.message}`);
+      try {
+        setErrorTitle('Failed to Update Member');
+        setErrorMessage(error.response?.data?.message || error.message || 'An unexpected error occurred while updating the member. Please try again.');
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert('Failed to update member: ' + (error.response?.data?.message || error.message));
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -1110,7 +1221,14 @@ const GogteKulAdmin = () => {
       }
     } catch (error) {
       console.error('❌ Error deleting member:', error);
-      alert(`Failed to delete member: ${error.response?.data?.message || error.message}`);
+      try {
+        setErrorTitle('Failed to Delete Member');
+        setErrorMessage(error.response?.data?.message || error.message || 'Unable to delete member. Please try again.');
+        setShowErrorModal(true);
+      } catch (stateError) {
+        console.error('Error updating error modal state:', stateError);
+        alert('Failed to delete member: ' + (error.response?.data?.message || error.message));
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -1776,7 +1894,9 @@ const GogteKulAdmin = () => {
                               }
                             } catch (error) {
                               console.error('Error fetching news details:', error);
-                              alert('Failed to load news details');
+                              setErrorTitle('Failed to Load News Details');
+                              setErrorMessage('Unable to load news details. Please try again.');
+                              setShowErrorModal(true);
                             } finally {
                               setLoading(false);
                             }
@@ -1850,7 +1970,9 @@ const GogteKulAdmin = () => {
                               }
                             } catch (error) {
                               console.error('Error fetching event details:', error);
-                              alert('Failed to load event details');
+                              setErrorTitle('Failed to Load Event Details');
+                              setErrorMessage('Unable to load event details. Please try again.');
+                              setShowErrorModal(true);
                             } finally {
                               setLoading(false);
                             }
@@ -2021,7 +2143,14 @@ const GogteKulAdmin = () => {
                             setNewsFormImages([...newsFormImages, ...newImages]);
                           } catch (error) {
                             console.error('Error processing images:', error);
-                            alert('Failed to process images');
+                            try {
+                              setErrorTitle('Failed to Process News Images');
+                              setErrorMessage('Unable to process the selected images. Please try with different images.');
+                              setShowErrorModal(true);
+                            } catch (stateError) {
+                              console.error('Error updating error modal state:', stateError);
+                              alert('Failed to process images.');
+                            }
                           }
                         }}
                       />
@@ -2235,7 +2364,14 @@ const GogteKulAdmin = () => {
                             setEventFormImages([...eventFormImages, ...newImages]);
                           } catch (error) {
                             console.error('Error processing images:', error);
-                            alert('Failed to process images');
+                            try {
+                              setErrorTitle('Failed to Process Event Images');
+                              setErrorMessage('Unable to process the selected images. Please try with different images.');
+                              setShowErrorModal(true);
+                            } catch (stateError) {
+                              console.error('Error updating error modal state:', stateError);
+                              alert('Failed to process images.');
+                            }
                           }
                         }}
                       />
@@ -2690,6 +2826,35 @@ const GogteKulAdmin = () => {
                   setSuccessMessage('');
                 }}
                 className="px-6 py-3 rounded-xl text-white font-semibold transition-all bg-green-600 hover:bg-green-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Modal */}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+            <div className="p-8 text-center">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center bg-red-100">
+                <AlertCircle className="w-10 h-10 text-red-600" />
+              </div>
+              <h3 className="text-2xl font-bold mb-2 text-red-600">
+                {errorTitle}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                {errorMessage}
+              </p>
+              <button
+                onClick={() => {
+                  setShowErrorModal(false);
+                  setErrorMessage('');
+                  setErrorTitle('Error');
+                }}
+                className="px-6 py-3 rounded-xl text-white font-semibold transition-all bg-red-600 hover:bg-red-700"
               >
                 Close
               </button>
@@ -3762,7 +3927,14 @@ const GogteKulAdmin = () => {
                           }
                         } catch (error) {
                           console.error('Error uploading images:', error);
-                          alert('Failed to upload images');
+                          try {
+                            setErrorTitle('Failed to Upload News Images');
+                            setErrorMessage('Unable to upload images to the news item. Please try again.');
+                            setShowErrorModal(true);
+                          } catch (stateError) {
+                            console.error('Error updating error modal state:', stateError);
+                            alert('Failed to upload images.');
+                          }
                         } finally {
                           setIsProcessing(false);
                         }
@@ -4063,7 +4235,14 @@ const GogteKulAdmin = () => {
                           }
                         } catch (error) {
                           console.error('Error uploading images:', error);
-                          alert('Failed to upload images');
+                          try {
+                            setErrorTitle('Failed to Upload Event Images');
+                            setErrorMessage('Unable to upload images to the event. Please try again.');
+                            setShowErrorModal(true);
+                          } catch (stateError) {
+                            console.error('Error updating error modal state:', stateError);
+                            alert('Failed to upload images.');
+                          }
                         } finally {
                           setIsProcessing(false);
                         }
@@ -4298,7 +4477,14 @@ const GogteKulAdmin = () => {
                     }
                   } catch (error) {
                     console.error('Error deleting image:', error);
-                    alert(`Failed to delete image: ${error.response?.data?.message || error.message}`);
+                    try {
+                      setErrorTitle('Failed to Delete Image');
+                      setErrorMessage(error.response?.data?.message || error.message || 'Unable to delete image. Please try again.');
+                      setShowErrorModal(true);
+                    } catch (stateError) {
+                      console.error('Error updating error modal state:', stateError);
+                      alert('Failed to delete image: ' + (error.response?.data?.message || error.message));
+                    }
                   } finally {
                     setIsProcessing(false);
                   }
